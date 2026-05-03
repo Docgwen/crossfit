@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CrossFit WOD & PR — Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; }
+
+body {
+  background: #1a1917;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* Béton texture via CSS noise */
+.scene {
+  position: relative;
+  width: 1200px;
+  height: 720px;
+  overflow: hidden;
+  border-radius: 12px;
+  background:
+    radial-gradient(ellipse at 20% 80%, rgba(184,255,87,.05) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(184,255,87,.04) 0%, transparent 40%),
+    #1c1b19;
+}
+
+/* Grain béton */
+.scene::before {
+  content: '';
+  position: absolute; inset: 0; z-index: 0;
+  background-image:
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity: .04;
+  mix-blend-mode: overlay;
+}
+
+/* Sol béton en perspective */
+.floor {
+  position: absolute;
+  bottom: -60px; left: -10%; right: -10%;
+  height: 420px;
+  background: linear-gradient(to top, #111 0%, #1a1917 60%, transparent 100%);
+  transform: perspective(700px) rotateX(55deg);
+  transform-origin: bottom center;
+  z-index: 1;
+}
+.floor::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(90deg, rgba(255,255,255,.015) 0px, rgba(255,255,255,.015) 1px, transparent 1px, transparent 60px),
+              repeating-linear-gradient(0deg, rgba(255,255,255,.015) 0px, rgba(255,255,255,.015) 1px, transparent 1px, transparent 60px);
+}
+
+/* Lumière spotlight */
+.spotlight {
+  position: absolute;
+  top: -200px; left: 50%; transform: translateX(-50%);
+  width: 800px; height: 600px;
+  background: radial-gradient(ellipse, rgba(184,255,87,.06) 0%, transparent 65%);
+  z-index: 2; pointer-events: none;
+}
+
+/* Téléphone shell */
+.phone {
+  position: absolute;
+  width: 280px;
+  height: 606px; /* ratio Samsung Flip ouvert ~19.3:9 */
+  background: #1e1e2a;
+  border-radius: 32px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1.5px #2e2d3c,
+    0 0 0 3px #1a1a26,
+    0 60px 120px rgba(0,0,0,.7),
+    0 20px 40px rgba(0,0,0,.5),
+    inset 0 0 0 1px rgba(255,255,255,.04);
+  z-index: 10;
+  transform-origin: center bottom;
+  transition: transform .4s cubic-bezier(.2,.8,.3,1);
+}
+.phone:hover { transform: translateY(-8px) !important; }
+
+/* Notch Samsung Flip */
+.phone-notch {
+  position: absolute;
+  top: 10px; left: 50%; transform: translateX(-50%);
+  width: 12px; height: 12px;
+  background: #111;
+  border-radius: 50%;
+  z-index: 20;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.06);
+}
+
+/* Charnière centrale Samsung Flip */
+.hinge {
+  position: absolute;
+  left: 0; right: 0;
+  top: 50%;
+  height: 6px;
+  background: linear-gradient(to bottom, #0e0e18, #1a1a28, #0e0e18);
+  z-index: 20;
+  box-shadow: 0 0 8px rgba(0,0,0,.8);
+}
+.hinge::before, .hinge::after {
+  content: '';
+  position: absolute;
+  top: 50%; transform: translateY(-50%);
+  width: 30px; height: 2px;
+  background: rgba(255,255,255,.06);
+  border-radius: 2px;
+}
+.hinge::before { left: 16px; }
+.hinge::after { right: 16px; }
+
+/* Contenu iframe dans le phone */
+.phone-screen {
+  position: absolute;
+  inset: 0;
+  border: none;
+  border-radius: 32px;
+  overflow: hidden;
+}
+
+/* Disposition des 3 phones */
+.phone-left {
+  left: 80px; bottom: 60px;
+  transform: rotate(-8deg) translateY(20px);
+}
+.phone-center {
+  left: 50%; transform: translateX(-50%) translateY(-20px);
+  bottom: 40px;
+  width: 300px; height: 648px;
+  border-radius: 36px;
+}
+.phone-right {
+  right: 80px; bottom: 60px;
+  transform: rotate(8deg) translateY(20px);
+}
+
+/* Labels flottants */
+.tag {
+  position: absolute;
+  background: rgba(184,255,87,.12);
+  border: 1px solid rgba(184,255,87,.25);
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  color: #b8ff57;
+  letter-spacing: .08em;
+  z-index: 30;
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+}
+
+/* Titre principal */
+.headline {
+  position: absolute;
+  top: 36px; left: 0; right: 0;
+  text-align: center;
+  z-index: 30;
+}
+.headline h1 {
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(255,255,255,.3);
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  font-family: 'DM Mono', monospace;
+}
+.headline .sub {
+  font-size: 38px;
+  font-weight: 800;
+  color: #e4e2f0;
+  line-height: 1.1;
+  margin-top: 4px;
+  letter-spacing: -.02em;
+}
+.headline .accent { color: #b8ff57; }
+
+/* Badge feature */
+.feature-badge {
+  position: absolute;
+  background: rgba(28,27,25,.85);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 10px 14px;
+  z-index: 30;
+  backdrop-filter: blur(12px);
+  min-width: 140px;
+}
+.feature-badge .fb-label {
+  font-size: 9px;
+  font-family: 'DM Mono', monospace;
+  color: rgba(255,255,255,.35);
+  letter-spacing: .1em;
+  margin-bottom: 4px;
+}
+.feature-badge .fb-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #e4e2f0;
+  line-height: 1;
+}
+.feature-badge .fb-unit {
+  font-size: 12px;
+  color: rgba(255,255,255,.4);
+  margin-left: 3px;
+}
+.feature-badge .fb-sub {
+  font-size: 11px;
+  color: rgba(255,255,255,.3);
+  margin-top: 3px;
+}
+
+/* Zone bar mini */
+.mini-zonebar {
+  display: flex;
+  height: 5px;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 8px;
+  gap: 1px;
+}
+
+/* Ligne décorative */
+.deco-line {
+  position: absolute;
+  z-index: 5;
+  background: linear-gradient(to right, transparent, rgba(184,255,87,.15), transparent);
+  height: 1px;
+}
+</style>
+</head>
+<body>
+<div class="scene">
+  <div class="floor"></div>
+  <div class="spotlight"></div>
+
+  <!-- Lignes décoratives -->
+  <div class="deco-line" style="top:48%;left:0;right:0;"></div>
+
+  <!-- Headline -->
+  <div class="headline">
+    <div class="h1" style="font-size:12px;font-weight:500;color:rgba(255,255,255,.3);letter-spacing:.2em;text-transform:uppercase;font-family:'DM Mono',monospace;">CrossFit WOD & PR</div>
+    <div class="sub" style="font-size:34px;font-weight:800;color:#e4e2f0;line-height:1.1;margin-top:6px;letter-spacing:-.02em;">
+      Tracke chaque rep.<br/><span class="accent">Bats chaque PR.</span>
+    </div>
+  </div>
+
+  <!-- ── PHONE GAUCHE : Historique ── -->
+  <div class="phone phone-left" style="left:64px;bottom:55px;transform:rotate(-9deg) translateY(30px);">
+    <div class="phone-notch"></div>
+    <div class="hinge"></div>
+    <!-- Screen simulé : Historique -->
+    <div style="position:absolute;inset:0;background:#1e1e2a;display:flex;flex-direction:column;font-family:'DM Sans',sans-serif;">
+      <!-- status -->
+      <div style="height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;flex-shrink:0;">
+        <span style="font-size:10px;font-family:'DM Mono',monospace;color:#58566e;">9:41</span>
+        <span style="font-size:10px;color:#58566e;">●●●</span>
+      </div>
+      <!-- header -->
+      <div style="padding:2px 18px 10px;flex-shrink:0;">
+        <div style="font-size:8px;font-family:'DM Mono',monospace;color:#58566e;letter-spacing:.08em;margin-bottom:3px;">SÉANCES</div>
+        <div style="font-size:20px;font-weight:700;color:#e4e2f0;line-height:1.1;">Historique</div>
+      </div>
+      <!-- chips -->
+      <div style="display:flex;gap:5px;padding:0 18px 8px;flex-shrink:0;">
+        <div style="padding:3px 10px;border-radius:20px;background:#b8ff57;color:#1e1e2a;font-size:9px;font-weight:600;">Tous</div>
+        <div style="padding:3px 10px;border-radius:20px;border:1px solid #363648;color:#8e8ca8;font-size:9px;">Avr 26</div>
+        <div style="padding:3px 10px;border-radius:20px;border:1px solid #363648;color:#8e8ca8;font-size:9px;">Mar 26</div>
+      </div>
+      <!-- cards -->
+      <div style="flex:1;padding:0 18px;display:flex;flex-direction:column;gap:7px;overflow:hidden;">
+        <!-- card 1 -->
+        <div style="background:#2c2c3c;border-radius:11px;padding:11px 12px;display:flex;flex-direction:column;gap:4px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:8px;font-family:'DM Mono',monospace;color:#b8ff57;letter-spacing:.05em;">FOR TIME</span>
+            <span style="font-size:8px;font-family:'DM Mono',monospace;color:#58566e;">Mer 30 Avr</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;">
+            <span style="font-size:15px;font-weight:700;color:#e4e2f0;">Fran</span>
+            <span style="font-size:14px;font-weight:700;color:#b8ff57;">3:47</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:9px;color:#58566e;">📍 CrossFit SUD · 👤 Romain</span>
+            <div style="display:flex;gap:5px;align-items:center;">
+              <span style="font-size:8px;font-family:'DM Mono',monospace;color:#58566e;">380 kcal</span>
+              <span style="font-size:8px;font-family:'DM Mono',monospace;color:#e03050;">♥187</span>
+            </div>
+          </div>
+        </div>
+        <!-- card 2 drop -->
+        <div style="background:#2c2c3c;border-radius:11px;padding:11px 12px;display:flex;flex-direction:column;gap:4px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="display:flex;gap:5px;align-items:center;">
+              <span style="font-size:8px;font-family:'DM Mono',monospace;color:#b8ff57;letter-spacing:.05em;">AMRAP 20</span>
+              <span style="font-size:8px;font-family:'DM Mono',monospace;background:rgba(240,160,80,.12);color:#f0a050;padding:1px 6px;border-radius:4px;">✈ DROP</span>
+            </div>
+            <span style="font-size:8px;font-family:'DM Mono',monospace;color:#58566e;">Lun 28 Avr</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;">
+            <span style="font-size:15px;font-weight:700;color:#e4e2f0;">Cindy</span>
+            <span style="font-size:14px;font-weight:700;color:#b8ff57;">22 rds</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:9px;color:#58566e;">📍 CrossFit BCN · 👤 Maria</span>
+            <div style="display:flex;gap:5px;align-items:center;">
+              <span style="font-size:8px;font-family:'DM Mono',monospace;color:#58566e;">520 kcal</span>
+              <span style="font-size:8px;font-family:'DM Mono',monospace;color:#e03050;">♥178</span>
+            </div>
+          </div>
+        </div>
+        <!-- card 3 -->
+        <div style="background:#2c2c3c;border-radius:11px;padding:11px 12px;display:flex;flex-direction:column;gap:4px;opacity:.7;">
+          <div style="display:flex;justify-content:space-between;">
+            <span style="font-size:8px;font-family:'DM Mono',monospace;color:#b8ff57;">STRENGTH</span>
+            <span style="font-size:8px;font-family:'DM Mono',monospace;color:#58566e;">Sam 26 Avr</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;">
+            <span style="font-size:15px;font-weight:700;color:#e4e2f0;">Snatch</span>
+            <span style="font-size:14px;font-weight:700;color:#b8ff57;">80 kg</span>
+          </div>
+        </div>
+      </div>
+      <!-- tab bar -->
+      <div style="height:52px;background:#252532;border-top:1px solid #363648;display:flex;align-items:center;justify-content:space-around;flex-shrink:0;padding:0 8px;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;opacity:.35;">
+          <div style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#58566e" stroke-width="1.8" stroke-linecap="round"><path d="M12 2l2 6h5.5l-4.5 3.3 1.7 5.2L12 13l-4.7 3.4 1.7-5.2L4.5 8H10z"/></svg></div>
+          <span style="font-size:7px;font-family:'DM Mono',monospace;color:#58566e;">WOD</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;opacity:.35;">
+          <div style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#58566e" stroke-width="1.8" stroke-linecap="round"><path d="M5 13l5 5L20 6"/></svg></div>
+          <span style="font-size:7px;font-family:'DM Mono',monospace;color:#58566e;">PR</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;opacity:.35;">
+          <div style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#58566e" stroke-width="1.8" stroke-linecap="round"><path d="M3 17h3V9H3v8zm5 0h3V5H8v12zm5 0h3V1h-3v16z"/></svg></div>
+          <span style="font-size:7px;font-family:'DM Mono',monospace;color:#58566e;">Stats</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+          <div style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b8ff57" stroke-width="1.8" stroke-linecap="round"><path d="M12 7v5l3.5 2m5.5-4a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+          <span style="font-size:7px;font-family:'DM Mono',monospace;color:#b8ff57;">Histo</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PHONE CENTRE : Saisie WOD ── -->
+  <div class="phone phone-center">
+    <div class="phone-notch"></div>
+    <div class="hinge"></div>
+    <div style="position:absolute;inset:0;background:#1e1e2a;display:flex;flex-direction:column;font-family:'DM Sans',sans-serif;">
+      <!-- status -->
+      <div style="height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;">
+        <span style="font-size:11px;font-family:'DM Mono',monospace;color:#58566e;">9:41</span>
+        <span style="font-size:10px;color:#58566e;">●●●</span>
+      </div>
+      <!-- header -->
+      <div style="padding:0 22px 12px;flex-shrink:0;">
+        <div style="font-size:9px;font-family:'DM Mono',monospace;color:#58566e;letter-spacing:.08em;margin-bottom:4px;">NOUVEAU WOD</div>
+        <div style="font-size:22px;font-weight:700;color:#e4e2f0;line-height:1.1;">Samedi 3 Mai</div>
+      </div>
+      <!-- format chips -->
+      <div style="display:flex;gap:5px;padding:0 22px 12px;flex-wrap:wrap;flex-shrink:0;">
+        <div style="padding:4px 11px;border-radius:20px;background:#b8ff57;color:#1e1e2a;font-size:10px;font-weight:700;">FOR TIME</div>
+        <div style="padding:4px 11px;border-radius:20px;border:1.5px solid #363648;color:#8e8ca8;font-size:10px;">AMRAP</div>
+        <div style="padding:4px 11px;border-radius:20px;border:1.5px solid #363648;color:#8e8ca8;font-size:10px;">EMOM</div>
+        <div style="padding:4px 11px;border-radius:20px;border:1.5px solid #363648;color:#8e8ca8;font-size:10px;">STRENGTH</div>
+      </div>
+      <!-- box card -->
+      <div style="margin:0 22px 10px;background:#2c2c3c;border-radius:13px;padding:12px 14px;flex-shrink:0;">
+        <div style="display:flex;gap:7px;margin-bottom:10px;">
+          <div style="flex:1;height:32px;border-radius:8px;background:#b8ff57;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#1e1e2a;">📍 Ma box</div>
+          <div style="flex:1;height:32px;border-radius:8px;background:#2c2c3c;border:1px solid #363648;display:flex;align-items:center;justify-content:center;font-size:12px;color:#8e8ca8;">✈️ Drop-in</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;background:#363648;border-radius:7px;padding:8px 10px;font-size:12px;color:#e4e2f0;">CrossFit SUD</div>
+          <div style="width:90px;background:#363648;border-radius:7px;padding:8px 10px;font-size:12px;color:#e4e2f0;">Romain</div>
+        </div>
+      </div>
+      <!-- mouvements -->
+      <div style="padding:0 22px;flex-shrink:0;display:flex;flex-direction:column;gap:5px;">
+        <div style="font-size:9px;font-family:'DM Mono',monospace;color:#58566e;letter-spacing:.08em;margin-bottom:2px;">MOUVEMENTS</div>
+        <div style="display:flex;align-items:center;gap:7px;background:#2c2c3c;border-radius:10px;padding:9px 11px;">
+          <div style="width:5px;height:5px;border-radius:50%;background:#b8ff57;flex-shrink:0;"></div>
+          <span style="flex:1;font-size:13px;color:#e4e2f0;">Thrusters</span>
+          <span style="font-size:11px;color:#8e8ca8;">21 × 43 kg</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;background:#2c2c3c;border-radius:10px;padding:9px 11px;">
+          <div style="width:5px;height:5px;border-radius:50%;background:#b8ff57;flex-shrink:0;"></div>
+          <span style="flex:1;font-size:13px;color:#e4e2f0;">Pull-ups</span>
+          <span style="font-size:11px;color:#8e8ca8;">21 reps</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;border:1.5px dashed #363648;border-radius:10px;padding:8px 11px;">
+          <span style="font-size:16px;color:#b8ff57;line-height:1;">+</span>
+          <span style="font-size:12px;color:#58566e;">Ajouter un mouvement</span>
+        </div>
+      </div>
+      <!-- résultat -->
+      <div style="display:flex;gap:8px;padding:8px 22px;align-items:flex-start;">
+        <div style="flex:1;">
+          <div style="font-size:9px;font-family:'DM Mono',monospace;color:#58566e;letter-spacing:.08em;margin-bottom:3px;">RÉSULTAT</div>
+          <div style="background:#2c2c3c;border-radius:8px;padding:9px 12px;font-size:18px;font-weight:700;color:#e4e2f0;">3:47</div>
+        </div>
+        <div style="width:76px;">
+          <div style="font-size:9px;font-family:'DM Mono',monospace;color:#58566e;letter-spacing:.08em;margin-bottom:3px;">SCALE</div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <div style="background:#b8ff57;border-radius:7px;padding:6px;font-size:12px;font-weight:700;color:#1e1e2a;text-align:center;">Rx</div>
+            <div style="background:#2c2c3c;border-radius:7px;padding:6px;font-size:12px;color:#8e8ca8;text-align:center;">Scaled</div>
+          </div>
+        </div>
+      </div>
+      <!-- garmin mini -->
+      <div style="margin:0 22px;background:#2c2c3c;border-radius:13px;padding:11px 13px;flex-shrink:0;">
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:8px;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#b8ff57" stroke-width="2.2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          <span style="font-size:8px;font-family:'DM Mono',monospace;color:#b8ff57;letter-spacing:.08em;">DONNÉES GARMIN</span>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <div style="flex:1;background:#363648;border-radius:8px;padding:8px 9px;">
+            <div style="font-size:7px;font-family:'DM Mono',monospace;color:#58566e;margin-bottom:2px;">CALORIES</div>
+            <div style="font-size:16px;font-weight:700;color:#e4e2f0;line-height:1;">380</div>
+            <div style="font-size:8px;color:#58566e;">kcal</div>
+          </div>
+          <div style="flex:1;background:#363648;border-radius:8px;padding:8px 9px;">
+            <div style="font-size:7px;font-family:'DM Mono',monospace;color:#58566e;margin-bottom:2px;">FC MAX</div>
+            <div style="font-size:16px;font-weight:700;color:#e03050;line-height:1;">187</div>
+            <div style="font-size:8px;color:#58566e;">bpm</div>
+          </div>
+          <div style="flex:1;background:#363648;border-radius:8px;padding:8px 9px;">
+            <div style="font-size:7px;font-family:'DM Mono',monospace;color:#58566e;margin-bottom:2px;">Z2+Z3</div>
+            <div style="font-size:16px;font-weight:700;color:#4abf7a;line-height:1;">52<span style="font-size:9px;font-weight:400;">%</span></div>
+            <div style="font-size:8px;color:#58566e;">aérobie</div>
+          </div>
+        </div>
+        <!-- zone bar -->
+        <div style="margin-top:8px;height:5px;border-radius:3px;overflow:hidden;display:flex;gap:1px;">
+          <div style="width:0%;background:#4a9eff;"></div>
+          <div style="width:18%;background:#4abf7a;"></div>
+          <div style="width:34%;background:#f5c842;"></div>
+          <div style="width:31%;background:#f07830;"></div>
+          <div style="width:17%;background:#e03050;"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:5px;">
+          <div style="display:flex;align-items:center;gap:2px;"><div style="width:5px;height:5px;border-radius:50%;background:#4abf7a;"></div><span style="font-size:7px;font-family:'DM Mono',monospace;color:#4abf7a;">Z2 18%</span></div>
+          <div style="display:flex;align-items:center;gap:2px;"><div style="width:5px;height:5px;border-radius:50%;background:#f5c842;"></div><span style="font-size:7px;font-family:'DM Mono',monospace;color:#f5c842;">Z3 34%</span></div>
+          <div style="display:flex;align-items:center;gap:2px;"><div style="width:5px;height:5px;border-radius:50%;background:#f07830;"></div><span style="font-size:7px;font-family:'DM Mono',monospace;color:#58566e;">Z4 31%</span></div>
+          <div style="display:flex;align-items:center;gap:2px;"><div style="width:5px;height:5px;border-radius:50%;background:#e03050;"></div><span style="font-size:7px;font-family:'DM Mono',monospace;color:#58566e;">Z5 17%</span></div>
+        </div>
+      </div>
+      <!-- save button -->
+      <div style="margin:8px 22px 0;height:42px;border-radius:12px;background:#b8ff57;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#1e1e2a;flex-shrink:0;">
+        Enregistrer le WOD
+      </div>
+      <!-- tab bar -->
+      <div style="height:54px;background:#252532;border-top:1px solid #363648;display:flex;align-items:center;justify-content:space-around;margin-top:auto;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
+          <div style="width:20px;height:20px;display:flex;align-items:center;justify-content:center;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b8ff57" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2 6h5.5l-4.5 3.3 1.7 5.2L12 13l-4.7 3.4 1.7-5.2L4.5 8H10z"/></svg>
+          </div>
+          <span style="font-size:8px;font-family:'DM Mono',monospace;color:#b8ff57;">WOD</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;opacity:.35;">
+          <div style="width:20px;height:20px;display:flex;align-items:center;justify-content:center;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#58566e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l5 5L20 6"/></svg>
+          </div>
+          <span style="font-size:8px;font-family:'DM Mono',monospace;color:#58566e;">PR</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;opacity:.35;">
+          <div style="width:20px;height:20px;display:flex;align-items:center;justify-content:center;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#58566e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17h3V9H3v8zm5 0h3V5H8v12zm5 0h3V1h-3v16z"/></svg>
+          </div>
+          <span style="font-size:8px;font-family:'DM Mono',monospace;color:#58566e;">Stats</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;opacity:.35;">
+          <div style="width:20px;height:20px;display:flex;align-items:center;justify-content:center;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#58566e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v5l3.5 2m5.5-4a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <span style="font-size:8px;font-family:'DM Mono',monospace;color:#58566e;">Histo</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PHONE DROIT : Mes PR ── -->
+  <div class="phone phone-right" style="right:64px;bottom:55px;transform:rotate(9deg) translateY(30px);">
+    <div class="phone-notch"></div>
+    <div class="hinge"></div>
+    <div style="position:absolute;inset:0;background:#1e1e2a;display:flex;flex-direction:column;font-family:'DM Sans',sans-serif;">
+      <!-- status -->
+      <div style="height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;flex-shrink:0;">
+        <span style="font-size:10px;font-family:'DM Mono',monospace;color:#58566e;">9:41</span>
+        <span style="font-size:10px;color:#58566e;">●●●</span>
+      </div>
+      <!-- header -->
+      <div style="padding:2px 18px 8px;flex-shrink:0;">
+        <div style="font-size:8px;font-family:'DM Mono',monospace;color:#58566e;letter-spacing:.08em;margin-bottom:3px;">RECORDS PERSONNELS</div>
+        <div style="font-size:20px;font-weight:700;color:#e4e2f0;line-height:1.1;margin-bottom:8px;">Mes PR</div>
+        <div style="display:flex;gap:5px;">
+          <div style="padding:3px 10px;border-radius:20px;background:#b8ff57;color:#1e1e2a;font-size:9px;font-weight:700;">Haltéro</div>
+          <div style="padding:3px 10px;border-radius:20px;border:1px solid #363648;color:#8e8ca8;font-size:9px;">Gymn.</div>
+          <div style="padding:3px 10px;border-radius:20px;border:1px solid #363648;color:#8e8ca8;font-size:9px;">Cardio</div>
+        </div>
+      </div>
+      <!-- PR list -->
+      <div style="flex:1;padding:6px 18px;display:flex;flex-direction:column;gap:6px;overflow:hidden;">
+        <div style="background:#2c2c3c;border-radius:11px;padding:11px 12px;display:flex;align-items:center;gap:8px;">
+          <div style="width:3px;height:30px;border-radius:2px;background:#b8ff57;flex-shrink:0;"></div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;color:#e4e2f0;">Clean & Jerk</div>
+            <div style="font-size:8px;font-family:'DM Mono',monospace;color:#58566e;margin-top:1px;">Fév 26</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:16px;font-weight:700;color:#b8ff57;">105 kg</div>
+            <div style="font-size:9px;color:#5abf7a;margin-top:1px;">▲ +5 kg</div>
+          </div>
+        </div>
+        <div style="background:#2c2c3c;border-radius:11px;padding:11px 12px;display:flex;align-items:center;gap:8px;">
+          <div style="width:3px;height:30px;border-radius:2px;background:#b8ff57;flex-shrink:0;"></div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;color:#e4e2f0;">Back Squat</div>
+            <div style="font-size:8px;font-family:'DM Mono',monospace;color:#58566e;margin-top:1px;">Jan 26</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:16px;font-weight:700;color:#b8ff57;">140 kg</div>
+            <div style="font-size:9px;color:#5abf7a;margin-top:1px;">▲ +10 kg</div>
+          </div>
+        </div>
+        <div style="background:#2c2c3c;border-radius:11px;padding:11px 12px;display:flex;align-items:center;gap:8px;">
+          <div style="width:3px;height:30px;border-radius:2px;background:#b8ff57;flex-shrink:0;"></div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;color:#e4e2f0;">Snatch</div>
+            <div style="font-size:8px;font-family:'DM Mono',monospace;color:#58566e;margin-top:1px;">Avr 26</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:16px;font-weight:700;color:#b8ff57;">80 kg</div>
+            <div style="font-size:9px;color:#5abf7a;margin-top:1px;">▲ +3 kg</div>
+          </div>
+        </div>
+        <div style="background:#2c2c3c;border-radius:11px;padding:11px 12px;display:flex;align-items:center;gap:8px;">
+          <div style="width:3px;height:30px;border-radius:2px;background:#b8ff57;flex-shrink:0;"></div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;color:#e4e2f0;">Deadlift</div>
+            <div style="font-size:8px;font-family:'DM Mono',monospace;color:#58566e;margin-top:1px;">Mar 26</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:16px;font-weight:700;color:#b8ff57;">180 kg</div>
+            <div style="font-size:9px;color:#5abf7a;margin-top:1px;">▲ +5 kg</div>
+          </div>
+        </div>
+      </div>
+      <!-- tab bar -->
+      <div style="height:52px;background:#252532;border-top:1px solid #363648;display:flex;align-items:center;justify-content:space-around;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;opacity:.35;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#58566e" stroke-width="1.8" stroke-linecap="round"><path d="M12 2l2 6h5.5l-4.5 3.3 1.7 5.2L12 13l-4.7 3.4 1.7-5.2L4.5 8H10z"/></svg>
+          <span style="font-size:7px;font-family:'DM Mono',monospace;color:#58566e;">WOD</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b8ff57" stroke-width="1.8" stroke-linecap="round"><path d="M5 13l5 5L20 6"/></svg>
+          <span style="font-size:7px;font-family:'DM Mono',monospace;color:#b8ff57;">PR</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;opacity:.35;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#58566e" stroke-width="1.8" stroke-linecap="round"><path d="M3 17h3V9H3v8zm5 0h3V5H8v12zm5 0h3V1h-3v16z"/></svg>
+          <span style="font-size:7px;font-family:'DM Mono',monospace;color:#58566e;">Stats</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;opacity:.35;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#58566e" stroke-width="1.8" stroke-linecap="round"><path d="M12 7v5l3.5 2m5.5-4a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span style="font-size:7px;font-family:'DM Mono',monospace;color:#58566e;">Histo</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tags flottants -->
+  <div class="tag" style="top:168px;left:44px;">Historique séances</div>
+  <div class="tag" style="top:168px;right:40px;">Records PR</div>
+
+  <!-- Feature badges -->
+  <div class="feature-badge" style="left:34px;top:260px;">
+    <div class="fb-label">DROP-IN TRACKÉ</div>
+    <div class="fb-value">✈<span class="fb-unit" style="font-size:15px;">Barcelone</span></div>
+    <div class="fb-sub">Box + coach sauvegardés</div>
+  </div>
+
+  <div class="feature-badge" style="right:28px;top:260px;">
+    <div class="fb-label">PROGRESSION</div>
+    <div class="fb-value" style="color:#b8ff57;">+15<span class="fb-unit">kg</span></div>
+    <div class="fb-sub">Back squat en 3 mois</div>
+    <div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;margin-top:8px;overflow:hidden;">
+      <div style="width:72%;height:100%;background:#b8ff57;border-radius:2px;"></div>
+    </div>
+  </div>
+
+  <div class="feature-badge" style="left:50%;transform:translateX(-50%);bottom:22px;">
+    <div style="display:flex;gap:20px;align-items:center;">
+      <div>
+        <div class="fb-label">CALORIES</div>
+        <div class="fb-value">380<span class="fb-unit">kcal</span></div>
+      </div>
+      <div style="width:1px;height:32px;background:rgba(255,255,255,.08);"></div>
+      <div>
+        <div class="fb-label">FC MAX</div>
+        <div class="fb-value" style="color:#e03050;">187<span class="fb-unit">bpm</span></div>
+      </div>
+      <div style="width:1px;height:32px;background:rgba(255,255,255,.08);"></div>
+      <div>
+        <div class="fb-label">ZONE 2+3</div>
+        <div class="fb-value" style="color:#4abf7a;">52<span class="fb-unit">%</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// Scale la scene pour tenir dans la fenetre
+function scale() {
+  const scene = document.querySelector('.scene');
+  const W = 1200, H = 720;
+  const sx = window.innerWidth / W;
+  const sy = window.innerHeight / H;
+  const s = Math.min(sx, sy);
+  scene.style.transform = `scale(${s})`;
+  scene.style.transformOrigin = 'center center';
+  scene.style.position = 'absolute';
+  scene.style.left = '50%';
+  scene.style.top = '50%';
+  scene.style.marginLeft = `-${W/2}px`;
+  scene.style.marginTop = `-${H/2}px`;
+}
+scale();
+window.addEventListener('resize', scale);
+</script>
+</body>
+</html>

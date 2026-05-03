@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CrossFit WOD & PR</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: #13131d;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh;
+  font-family: 'DM Sans', sans-serif;
+}
+* { scrollbar-width: none; }
+*::-webkit-scrollbar { display: none; }
+
+/* Tweaks panel */
+.twk-panel{position:fixed;right:16px;bottom:16px;z-index:9999;width:270px;
+  max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+  background:rgba(30,28,40,.92);color:#e0ddf0;
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,.1);border-radius:14px;
+  box-shadow:0 12px 40px rgba(0,0,0,.5);
+  font:12px/1.4 'DM Sans',sans-serif;overflow:hidden}
+.twk-hd{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 10px 10px 14px;cursor:move;user-select:none;border-bottom:1px solid rgba(255,255,255,.07)}
+.twk-hd b{font-size:12px;font-weight:600;letter-spacing:.04em;color:#e0ddf0}
+.twk-x{appearance:none;border:0;background:transparent;color:rgba(224,221,240,.4);
+  width:22px;height:22px;border-radius:6px;cursor:pointer;font-size:14px;line-height:22px}
+.twk-x:hover{background:rgba(255,255,255,.08);color:#e0ddf0}
+.twk-body{padding:12px 14px;display:flex;flex-direction:column;gap:10px;
+  overflow-y:auto;min-height:0}
+.twk-sect{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:rgba(224,221,240,.4);padding-top:6px;margin-top:2px}
+.twk-sect:first-child{padding-top:0;margin-top:0}
+.twk-row{display:flex;flex-direction:column;gap:4px}
+.twk-row-h{flex-direction:row;align-items:center;justify-content:space-between}
+.twk-lbl{font-size:11.5px;color:rgba(224,221,240,.7);font-weight:500}
+.twk-slider{appearance:none;-webkit-appearance:none;width:100%;height:4px;
+  border-radius:999px;background:rgba(255,255,255,.12);outline:none}
+.twk-slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;
+  border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4);cursor:pointer}
+.twk-swatch{appearance:none;-webkit-appearance:none;width:48px;height:22px;
+  border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:0;cursor:pointer;background:transparent}
+.twk-swatch::-webkit-color-swatch-wrapper{padding:0}
+.twk-swatch::-webkit-color-swatch{border:0;border-radius:5px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+// ─────────────────────────────────────────────────────────
+// DESIGN TOKENS
+// ─────────────────────────────────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accentColor": "#b8ff57",
+  "dropColor": "#f0a050",
+  "bg0": "#1e1e2a",
+  "bg1": "#252532",
+  "bg2": "#2c2c3c",
+  "bg3": "#363648",
+  "textPrimary": "#e4e2f0",
+  "textSecondary": "#8e8ca8",
+  "textMuted": "#58566e",
+  "cardRadius": 14
+}/*EDITMODE-END*/;
+
+// ─────────────────────────────────────────────────────────
+// TWEAKS HOOK & PANEL
+// ─────────────────────────────────────────────────────────
+function useTweaks(defaults) {
+  const [values, setValues] = React.useState(defaults);
+  const set = React.useCallback((keyOrObj, val) => {
+    const edits = typeof keyOrObj === 'object' ? keyOrObj : { [keyOrObj]: val };
+    setValues(prev => ({ ...prev, ...edits }));
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits }, '*');
+  }, []);
+  return [values, set];
+}
+
+function TweaksPanel({ children }) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    const handler = (e) => {
+      if (e?.data?.type === '__activate_edit_mode') setOpen(true);
+      if (e?.data?.type === '__deactivate_edit_mode') setOpen(false);
+    };
+    window.addEventListener('message', handler);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', handler);
+  }, []);
+  const dismiss = () => { setOpen(false); window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*'); };
+  if (!open) return null;
+  return (
+    <div ref={ref} className="twk-panel">
+      <div className="twk-hd"><b>Tweaks</b><button className="twk-x" onClick={dismiss}>✕</button></div>
+      <div className="twk-body">{children}</div>
+    </div>
+  );
+}
+function TweakSection({ label }) { return <div className="twk-sect">{label}</div>; }
+function TweakColor({ label, value, onChange }) {
+  return (
+    <div className="twk-row twk-row-h">
+      <span className="twk-lbl">{label}</span>
+      <input type="color" className="twk-swatch" value={value} onChange={e => onChange(e.target.value)} />
+    </div>
+  );
+}
+function TweakSlider({ label, value, min, max, step = 1, unit = '', onChange }) {
+  return (
+    <div className="twk-row">
+      <div className="twk-row twk-row-h"><span className="twk-lbl">{label}</span><span style={{fontSize:11,color:'rgba(224,221,240,.4)',fontFamily:'DM Mono'}}>{value}{unit}</span></div>
+      <input type="range" className="twk-slider" min={min} max={max} step={step} value={value} onChange={e => onChange(Number(e.target.value))} />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// SAMPLE DATA
+// ─────────────────────────────────────────────────────────
+const HISTORY = [
+  { id:1, date:'Mer 30 Avr', type:'FOR TIME', name:'Fran', result:'3:47', scale:'Rx', box:'CrossFit SUD', coach:'Romain', drop:false, city:'Montpellier', garmin:{ cal:380, fcMax:187, z2:18, z3:34, z4:31, z5:17 } },
+  { id:2, date:'Lun 28 Avr', type:'AMRAP 20', name:'Cindy', result:'22 rds', scale:'Rx', box:'CrossFit BCN', coach:'Maria', drop:true, city:'Barcelone', garmin:{ cal:520, fcMax:178, z2:28, z3:42, z4:22, z5:8 } },
+  { id:3, date:'Sam 26 Avr', type:'STRENGTH', name:'Snatch', result:'80 kg', scale:'1RM', box:'CrossFit SUD', coach:'Alex', drop:false, city:'Montpellier', garmin:{ cal:290, fcMax:165, z2:41, z3:35, z4:18, z5:6 } },
+  { id:4, date:'Mer 23 Avr', type:'FOR TIME', name:'Grace', result:'4:12', scale:'Rx', box:'CrossFit SUD', coach:'Romain', drop:false, city:'Montpellier', garmin:{ cal:310, fcMax:182, z2:12, z3:29, z4:38, z5:21 } },
+  { id:5, date:'Lun 21 Avr', type:'EMOM 12', name:'Clean', result:'70 kg', scale:'Rx+', box:'Box Du Sud', coach:'Julie', drop:true, city:'Marseille', garmin:{ cal:420, fcMax:174, z2:35, z3:38, z4:20, z5:7 } },
+  { id:6, date:'Sam 19 Avr', type:'CHIPPER', name:'DT', result:'5:28', scale:'Rx', box:'CrossFit SUD', coach:'Alex', drop:false, city:'Montpellier', garmin:{ cal:460, fcMax:185, z2:14, z3:27, z4:35, z5:24 } },
+];
+
+const PR_DATA = {
+  halte: [
+    { name:'Clean & Jerk', pr:'105 kg', date:'Fév 26', history:[90,95,95,100,100,105,105], trend:'+5 kg' },
+    { name:'Back Squat', pr:'140 kg', date:'Jan 26', history:[110,120,125,130,130,140,140], trend:'+10 kg' },
+    { name:'Snatch', pr:'80 kg', date:'Avr 26', history:[65,70,72,75,77,77,80], trend:'+3 kg' },
+    { name:'Deadlift', pr:'180 kg', date:'Mar 26', history:[150,160,165,170,175,180,180], trend:'+5 kg' },
+    { name:'Front Squat', pr:'115 kg', date:'Fév 26', history:[90,95,100,105,110,110,115], trend:'+5 kg' },
+  ],
+  gymn: [
+    { name:'Pull-ups', pr:'32 reps', date:'Mar 26', history:[18,20,22,25,27,30,32], trend:'+2' },
+    { name:'HSPU', pr:'18 reps', date:'Avr 26', history:[8,10,12,14,15,16,18], trend:'+2' },
+    { name:'Muscle-up', pr:'8 reps', date:'Jan 26', history:[2,3,4,5,6,7,8], trend:'+1' },
+    { name:'T2B', pr:'25 reps', date:'Mar 26', history:[12,15,17,20,21,23,25], trend:'+2' },
+  ],
+  cardio: [
+    { name:'Run 5K', pr:'22:34', date:'Fév 26', history:[27,26,25,24,23,23,22], trend:'-48s' },
+    { name:'Row 500m', pr:'1:34', date:'Jan 26', history:[170,165,162,158,155,156,154], trend:'-2s' },
+    { name:'Run 1 mile', pr:'6:48', date:'Mar 26', history:[480,470,460,450,445,440,408], trend:'-12s' },
+  ],
+  bench: [
+    { name:'Fran', pr:'3:47', date:'Avr 26', history:[360,320,290,270,260,240,227], trend:'-13s' },
+    { name:'Grace', pr:'4:12', date:'Avr 26', history:[500,450,400,360,320,290,252], trend:'-22s' },
+    { name:'Cindy', pr:'25 rds', date:'Jan 26', history:[18,19,20,21,22,23,25], trend:'+2 rds' },
+    { name:'Murph', pr:'47:22', date:'Mar 26', history:[65,63,61,58,55,52,50], trend:'-2:30' },
+  ],
+};
+
+const STATS_MONTHLY = [
+  { m:'Oct', kg:4200, sessions:9, prs:1 },
+  { m:'Nov', kg:5100, sessions:11, prs:2 },
+  { m:'Déc', kg:4800, sessions:10, prs:1 },
+  { m:'Jan', kg:5600, sessions:12, prs:3 },
+  { m:'Fév', kg:6200, sessions:13, prs:4 },
+  { m:'Mar', kg:5900, sessions:11, prs:2 },
+  { m:'Avr', kg:6800, sessions:14, prs:3 },
+];
+
+// ─────────────────────────────────────────────────────────
+// SHARED UI PRIMITIVES
+// ─────────────────────────────────────────────────────────
+function StatusBar({ T }) {
+  return (
+    <div style={{ height:44, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 26px', flexShrink:0 }}>
+      <span style={{ fontSize:13, fontFamily:'DM Mono', color:T.textMuted }}>9:41</span>
+      <div style={{ display:'flex', gap:5, alignItems:'center' }}>
+        <svg width="16" height="11" viewBox="0 0 16 11" fill="none">
+          <rect x="0" y="4" width="3" height="7" rx="1" fill={T.textMuted} opacity=".5"/>
+          <rect x="4.5" y="2.5" width="3" height="8.5" rx="1" fill={T.textMuted} opacity=".7"/>
+          <rect x="9" y="1" width="3" height="10" rx="1" fill={T.textPrimary} opacity=".7"/>
+          <rect x="13.5" y="0" width="2.5" height="11" rx="1" fill={T.textPrimary}/>
+        </svg>
+        <svg width="14" height="11" viewBox="0 0 14 11" fill="none">
+          <rect x="1" y="3" width="11" height="7" rx="1.5" stroke={T.textMuted} strokeWidth="1.2" opacity=".6"/>
+          <rect x="2.5" y="4.5" width="7" height="4" rx=".8" fill={T.textMuted} opacity=".5"/>
+          <rect x="12.5" y="4.5" width="1.5" height="3" rx=".75" fill={T.textMuted} opacity=".4"/>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+function TabBar({ active, onTab, T }) {
+  const tabs = [
+    { id:'wod', label:'WOD', d:'M12 2l2 6h5.5l-4.5 3.3 1.7 5.2L12 13l-4.7 3.4 1.7-5.2L4.5 8H10z' },
+    { id:'pr', d:'M5 13l5 5L20 6', label:'PR' },
+    { id:'stats', d:'M3 17h3V9H3v8zm5 0h3V5H8v12zm5 0h3V1h-3v16z', label:'Stats' },
+    { id:'histo', d:'M12 7v5l3.5 2m5.5-4a9 9 0 11-18 0 9 9 0 0118 0z', label:'Histo' },
+  ];
+  return (
+    <div style={{ height:68, background:T.bg1, borderTop:`1px solid ${T.bg3}`, display:'flex', alignItems:'center', justifyContent:'space-around', flexShrink:0 }}>
+      {tabs.map(tab => {
+        const on = active === tab.id;
+        return (
+          <button key={tab.id} onClick={() => onTab(tab.id)} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4, padding:'6px 14px' }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={on ? T.accentColor : T.textMuted} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d={tab.d}/>
+            </svg>
+            <span style={{ fontSize:10, fontFamily:'DM Mono', color: on ? T.accentColor : T.textMuted, letterSpacing:'.04em' }}>{tab.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function Chip({ label, active, onClick, T, color }) {
+  const ac = color || T.accentColor;
+  return (
+    <button onClick={onClick} style={{
+      padding:'5px 14px', borderRadius:20, border:`1.5px solid ${active ? ac : T.bg3}`,
+      background: active ? ac : 'transparent',
+      color: active ? (color ? '#fff' : T.bg0) : T.textSecondary,
+      fontSize:13, fontFamily:'DM Sans', fontWeight: active ? 600 : 400, cursor:'pointer', whiteSpace:'nowrap', flexShrink:0,
+      transition:'all .15s'
+    }}>{label}</button>
+  );
+}
+
+function Card({ children, style={}, T }) {
+  return <div style={{ background:T.bg2, borderRadius:T.cardRadius, padding:'14px 16px', ...style }}>{children}</div>;
+}
+
+function Lbl({ children, style={}, T }) {
+  return <span style={{ fontSize:10, fontFamily:'DM Mono', color:T.textMuted, letterSpacing:'.08em', ...style }}>{children}</span>;
+}
+
+function MiniBar({ data, T, barColor, height=64 }) {
+  const max = Math.max(...data.map(d => d.v), 1);
+  const bc = barColor || T.accentColor;
+  return (
+    <div style={{ display:'flex', alignItems:'flex-end', gap:5, height }}>
+      {data.map((d, i) => (
+        <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
+          <div style={{ width:'100%', borderRadius:'3px 3px 0 0', background: i===data.length-1 ? bc : T.bg3, height:`${Math.max(4,(d.v/max)*(height-18))}px`, transition:'height .3s' }}></div>
+          <span style={{ fontSize:9, fontFamily:'DM Mono', color:T.textMuted }}>{d.l}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// GARMIN COMPONENTS
+// ─────────────────────────────────────────────────────────
+
+// Zones cardio : couleurs standard Garmin
+const ZONE_COLORS = ['#4a9eff', '#4abf7a', '#f5c842', '#f07830', '#e03050'];
+const ZONE_LABELS = ['Z1','Z2','Z3','Z4','Z5'];
+
+function ZoneBar({ z2, z3, z4, z5, T }) {
+  const z1 = Math.max(0, 100 - z2 - z3 - z4 - z5);
+  const zones = [z1, z2, z3, z4, z5];
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+      {/* Barre empilée */}
+      <div style={{ height:10, borderRadius:5, overflow:'hidden', display:'flex' }}>
+        {zones.map((v, i) => v > 0 && (
+          <div key={i} style={{ width:`${v}%`, background:ZONE_COLORS[i], transition:'width .4s' }}></div>
+        ))}
+      </div>
+      {/* Légende */}
+      <div style={{ display:'flex', gap:8 }}>
+        {zones.map((v, i) => (
+          <div key={i} style={{ display:'flex', alignItems:'center', gap:3, opacity: v === 0 ? .3 : 1 }}>
+            <div style={{ width:6, height:6, borderRadius:'50%', background:ZONE_COLORS[i], flexShrink:0 }}></div>
+            <span style={{ fontSize:10, fontFamily:'DM Mono', color: i===1||i===2 ? ZONE_COLORS[i] : T.textMuted }}>{ZONE_LABELS[i]} {v}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function GarminCard({ cal, fcMax, z2, z3, z4, z5, T }) {
+  return (
+    <Card T={T} style={{ display:'flex', flexDirection:'column', gap:12 }}>
+      {/* Header */}
+      <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.accentColor} strokeWidth="2" strokeLinecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        <Lbl T={T} style={{ color:T.accentColor }}>DONNÉES GARMIN</Lbl>
+      </div>
+      {/* Stats row */}
+      <div style={{ display:'flex', gap:8 }}>
+        <div style={{ flex:1, background:T.bg3, borderRadius:10, padding:'10px 12px', display:'flex', flexDirection:'column', gap:3 }}>
+          <Lbl T={T}>CALORIES</Lbl>
+          <div style={{ fontSize:22, fontWeight:700, color:T.textPrimary, lineHeight:1 }}>{cal}</div>
+          <div style={{ fontSize:10, color:T.textMuted }}>kcal</div>
+        </div>
+        <div style={{ flex:1, background:T.bg3, borderRadius:10, padding:'10px 12px', display:'flex', flexDirection:'column', gap:3 }}>
+          <Lbl T={T}>FC MAX</Lbl>
+          <div style={{ fontSize:22, fontWeight:700, color:'#e03050', lineHeight:1 }}>{fcMax}</div>
+          <div style={{ fontSize:10, color:T.textMuted }}>bpm</div>
+        </div>
+        <div style={{ flex:1, background:T.bg3, borderRadius:10, padding:'10px 12px', display:'flex', flexDirection:'column', gap:3 }}>
+          <Lbl T={T}>Z2+Z3</Lbl>
+          <div style={{ fontSize:22, fontWeight:700, color:'#4abf7a', lineHeight:1 }}>{z2+z3}<span style={{ fontSize:13, fontWeight:400 }}>%</span></div>
+          <div style={{ fontSize:10, color:T.textMuted }}>aérobie</div>
+        </div>
+      </div>
+      {/* Zone bar */}
+      <div>
+        <Lbl T={T} style={{ display:'block', marginBottom:8 }}>RÉPARTITION ZONES</Lbl>
+        <ZoneBar z2={z2} z3={z3} z4={z4} z5={z5} T={T} />
+      </div>
+    </Card>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// SCREEN: SAISIE WOD
+// ─────────────────────────────────────────────────────────
+function WodScreen({ T, onSaved }) {
+  const [format, setFormat] = React.useState('FOR TIME');
+  const [isDrop, setIsDrop] = React.useState(false);
+  const [box, setBox] = React.useState('CrossFit SUD');
+  const [coach, setCoach] = React.useState('Romain');
+  const [movements, setMovements] = React.useState([
+    { name:'Thrusters', detail:'21 × 43 kg' },
+    { name:'Pull-ups', detail:'21 reps' },
+  ]);
+  const [result, setResult] = React.useState('');
+  const [scale, setScale] = React.useState('Rx');
+  const [saved, setSaved] = React.useState(false);
+  const [cal, setCal] = React.useState('');
+  const [fcMax, setFcMax] = React.useState('');
+  const [z2, setZ2] = React.useState('');
+  const [z3, setZ3] = React.useState('');
+
+  const addMvt = () => setMovements(m => [...m, { name:'', detail:'' }]);
+  const removeMvt = i => setMovements(m => m.filter((_,j) => j !== i));
+  const updateMvt = (i, field, val) => setMovements(m => m.map((x,j) => j===i ? {...x,[field]:val} : x));
+
+  const handleSave = () => {
+    setSaved(true);
+    setTimeout(() => { setSaved(false); if(onSaved) onSaved(); }, 1400);
+  };
+
+  const inputStyle = { background:T.bg3, border:'none', borderRadius:8, padding:'9px 12px', color:T.textPrimary, fontSize:15, fontFamily:'DM Sans', outline:'none', width:'100%' };
+
+  return (
+    <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+      <div style={{ padding:'2px 22px 14px', flexShrink:0 }}>
+        <Lbl T={T}>NOUVEAU WOD</Lbl>
+        <div style={{ fontSize:26, fontWeight:700, color:T.textPrimary, lineHeight:1.2, marginTop:4 }}>Samedi 3 Mai</div>
+      </div>
+
+      <div style={{ flex:1, overflowY:'auto', padding:'0 22px 20px', display:'flex', flexDirection:'column', gap:16 }}>
+
+        {/* Format */}
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          <Lbl T={T}>FORMAT</Lbl>
+          <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+            {['FOR TIME','AMRAP','EMOM','STRENGTH','CHIPPER','HERO'].map(f => (
+              <Chip key={f} label={f} active={format===f} onClick={() => setFormat(f)} T={T} />
+            ))}
+          </div>
+        </div>
+
+        {/* Box */}
+        <Card T={T} style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          <div style={{ display:'flex', gap:8 }}>
+            <button onClick={() => setIsDrop(false)} style={{ flex:1, height:38, borderRadius:10, border:'none', background: !isDrop ? T.accentColor : T.bg3, color: !isDrop ? T.bg0 : T.textSecondary, fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'DM Sans', transition:'all .15s' }}>
+              📍 Ma box
+            </button>
+            <button onClick={() => setIsDrop(true)} style={{ flex:1, height:38, borderRadius:10, border:'none', background: isDrop ? T.dropColor : T.bg3, color: isDrop ? '#fff' : T.textSecondary, fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'DM Sans', transition:'all .15s' }}>
+              ✈️ Drop-in
+            </button>
+          </div>
+          <div style={{ display:'flex', gap:10 }}>
+            <div style={{ flex:1, display:'flex', flexDirection:'column', gap:4 }}>
+              <Lbl T={T}>BOX</Lbl>
+              <input value={box} onChange={e => setBox(e.target.value)} style={inputStyle}/>
+            </div>
+            <div style={{ width:105, display:'flex', flexDirection:'column', gap:4 }}>
+              <Lbl T={T}>COACH</Lbl>
+              <input value={coach} onChange={e => setCoach(e.target.value)} style={inputStyle}/>
+            </div>
+          </div>
+        </Card>
+
+        {/* Mouvements */}
+        <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+          <Lbl T={T}>MOUVEMENTS</Lbl>
+          {movements.map((m, i) => (
+            <div key={i} style={{ display:'flex', alignItems:'center', gap:8, background:T.bg2, borderRadius:T.cardRadius, padding:'10px 12px' }}>
+              <div style={{ width:6, height:6, borderRadius:'50%', background:T.accentColor, flexShrink:0 }}></div>
+              <input value={m.name} onChange={e => updateMvt(i,'name',e.target.value)} placeholder="Mouvement…" style={{ flex:1, background:'none', border:'none', color:T.textPrimary, fontSize:15, fontFamily:'DM Sans', outline:'none', minWidth:0 }}/>
+              <input value={m.detail} onChange={e => updateMvt(i,'detail',e.target.value)} placeholder="détail" style={{ width:88, background:'none', border:'none', color:T.textSecondary, fontSize:13, fontFamily:'DM Sans', outline:'none', textAlign:'right' }}/>
+              <button onClick={() => removeMvt(i)} style={{ background:'none', border:'none', color:T.textMuted, fontSize:15, cursor:'pointer', lineHeight:1 }}>✕</button>
+            </div>
+          ))}
+          <button onClick={addMvt} style={{ display:'flex', alignItems:'center', gap:8, background:'none', border:`1.5px dashed ${T.bg3}`, borderRadius:T.cardRadius, padding:'10px 12px', color:T.textMuted, fontSize:14, cursor:'pointer', fontFamily:'DM Sans' }}>
+            <span style={{ fontSize:18, color:T.accentColor, lineHeight:1 }}>+</span> Ajouter un mouvement
+          </button>
+        </div>
+
+        {/* Résultat + scale */}
+        <div style={{ display:'flex', gap:10, alignItems:'flex-start' }}>
+          <div style={{ flex:1, display:'flex', flexDirection:'column', gap:4 }}>
+            <Lbl T={T}>RÉSULTAT</Lbl>
+            <input value={result} onChange={e => setResult(e.target.value)} placeholder="ex: 3:47" style={{ ...inputStyle, fontSize:20, fontWeight:700, padding:'10px 12px' }}/>
+          </div>
+          <div style={{ width:88, display:'flex', flexDirection:'column', gap:4 }}>
+            <Lbl T={T}>SCALE</Lbl>
+            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              {['Rx','Scaled'].map(s => (
+                <button key={s} onClick={() => setScale(s)} style={{ padding:'8px', borderRadius:8, border:'none', background: scale===s ? T.accentColor : T.bg2, color: scale===s ? T.bg0 : T.textSecondary, fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'DM Sans', transition:'all .15s' }}>{s}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Notes */}
+        <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+          <Lbl T={T}>NOTES</Lbl>
+          <textarea placeholder="Sensations, commentaires…" style={{ ...inputStyle, height:60, resize:'none', lineHeight:1.5 }}></textarea>
+        </div>
+
+        {/* Garmin */}
+        <Card T={T} style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.accentColor} strokeWidth="2" strokeLinecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            <Lbl T={T} style={{ color:T.accentColor }}>DONNÉES GARMIN</Lbl>
+          </div>
+          <div style={{ display:'flex', gap:8 }}>
+            <div style={{ flex:1, display:'flex', flexDirection:'column', gap:4 }}>
+              <Lbl T={T}>CALORIES (kcal)</Lbl>
+              <input type="number" value={cal} onChange={e => setCal(e.target.value)} placeholder="ex: 380" style={{ ...inputStyle, fontSize:16, fontWeight:600 }}/>
+            </div>
+            <div style={{ flex:1, display:'flex', flexDirection:'column', gap:4 }}>
+              <Lbl T={T}>FC MAX (bpm)</Lbl>
+              <input type="number" value={fcMax} onChange={e => setFcMax(e.target.value)} placeholder="ex: 187" style={{ ...inputStyle, fontSize:16, fontWeight:600, color:'#e03050' }}/>
+            </div>
+          </div>
+          <div style={{ display:'flex', gap:8 }}>
+            <div style={{ flex:1, display:'flex', flexDirection:'column', gap:4 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                <div style={{ width:7, height:7, borderRadius:'50%', background:'#4abf7a' }}></div>
+                <Lbl T={T}>ZONE 2 (%)</Lbl>
+              </div>
+              <input type="number" value={z2} onChange={e => setZ2(e.target.value)} placeholder="ex: 28" style={{ ...inputStyle, fontSize:16, fontWeight:600, color:'#4abf7a' }}/>
+            </div>
+            <div style={{ flex:1, display:'flex', flexDirection:'column', gap:4 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                <div style={{ width:7, height:7, borderRadius:'50%', background:'#f5c842' }}></div>
+                <Lbl T={T}>ZONE 3 (%)</Lbl>
+              </div>
+              <input type="number" value={z3} onChange={e => setZ3(e.target.value)} placeholder="ex: 34" style={{ ...inputStyle, fontSize:16, fontWeight:600, color:'#f5c842' }}/>
+            </div>
+          </div>
+          {/* Preview barre zones si données saisies */}
+          {(z2 || z3) && (
+            <div>
+              <Lbl T={T} style={{ display:'block', marginBottom:8 }}>APERÇU ZONES</Lbl>
+              <ZoneBar z2={Number(z2)||0} z3={Number(z3)||0} z4={0} z5={0} T={T} />
+            </div>
+          )}
+        </Card>
+
+        {/* Bouton sauvegarder */}
+        <button onClick={handleSave} style={{ width:'100%', height:52, borderRadius:T.cardRadius, background: saved ? '#5abf7a' : T.accentColor, color:T.bg0, fontSize:17, fontWeight:700, fontFamily:'DM Sans', border:'none', cursor:'pointer', transition:'background .25s', letterSpacing:'.02em' }}>
+          {saved ? '✓ WOD enregistré !' : 'Enregistrer le WOD'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// SCREEN: SAISIE PR
+// ─────────────────────────────────────────────────────────
+const PR_EXERCISES = {
+  halte:  ['Clean & Jerk','Back Squat','Snatch','Deadlift','Front Squat','Overhead Squat','Clean','Jerk','Power Clean','Power Snatch'],
+  gymn:   ['Pull-ups','HSPU','Muscle-up','T2B','Ring Dips','Pistol','L-sit','Bar Muscle-up'],
+  cardio: ['Run 5K','Run 1 mile','Row 500m','Row 2K','Ski 500m','Bike 10K','Assault Bike'],
+  bench:  ['Fran','Grace','Cindy','Murph','Annie','Isabel','Helen','Diane','Karen'],
+};
+const PR_UNITS = {
+  halte: 'kg', gymn: 'reps', cardio: 'temps', bench: 'temps',
+};
+const RM_OPTIONS = ['1RM','2RM','3RM','5RM','Max reps','Temps','Distance'];
+
+function NewPRScreen({ T, onSaved, onBack }) {
+  const [cat, setCat] = React.useState('halte');
+  const [exercise, setExercise] = React.useState('Clean & Jerk');
+  const [custom, setCustom] = React.useState('');
+  const [isCustom, setIsCustom] = React.useState(false);
+  const [rmType, setRmType] = React.useState('1RM');
+  const [value, setValue] = React.useState('');
+  const [unit, setUnit] = React.useState('kg');
+  const [prevPR, setPrevPR] = React.useState('100');
+  const [date, setDate] = React.useState('03/05/2026');
+  const [notes, setNotes] = React.useState('');
+  const [saved, setSaved] = React.useState(false);
+
+  const cats = [{ id:'halte', label:'Haltéro' }, { id:'gymn', label:'Gymn.' }, { id:'cardio', label:'Cardio' }, { id:'bench', label:'Benchmark' }];
+  const exercises = PR_EXERCISES[cat];
+
+  const handleCat = (c) => { setCat(c); setExercise(PR_EXERCISES[c][0]); setIsCustom(false); setUnit(PR_UNITS[c] === 'kg' ? 'kg' : PR_UNITS[c] === 'reps' ? 'reps' : 'min:sec'); };
+
+  const unitOptions = cat === 'halte' ? ['kg','lbs'] : cat === 'gymn' ? ['reps'] : ['min:sec','sec'];
+
+  const isPR = value && prevPR && (cat === 'halte' || cat === 'gymn'
+    ? Number(value.replace(',','.')) > Number(prevPR.replace(',','.'))
+    : true);
+
+  const inputStyle = { background:T.bg3, border:'none', borderRadius:8, padding:'9px 12px', color:T.textPrimary, fontSize:15, fontFamily:'DM Sans', outline:'none', width:'100%' };
+
+  const handleSave = () => {
+    setSaved(true);
+    setTimeout(() => { setSaved(false); if(onSaved) onSaved(); }, 1400);
+  };
+
+  return (
+    <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+      {/* Header */}
+      <div style={{ padding:'2px 22px 12px', flexShrink:0, display:'flex', alignItems:'center', gap:12 }}>
+        <button onClick={onBack} style={{ background:T.bg2, border:'none', borderRadius:10, width:36, height:36, color:T.textSecondary, fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>←</button>
+        <div>
+          <Lbl T={T}>RECORDS PERSONNELS</Lbl>
+          <div style={{ fontSize:24, fontWeight:700, color:T.textPrimary, lineHeight:1.2 }}>Nouveau PR</div>
+        </div>
+      </div>
+
+      <div style={{ flex:1, overflowY:'auto', padding:'0 22px 20px', display:'flex', flexDirection:'column', gap:14 }}>
+
+        {/* Catégorie */}
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          <Lbl T={T}>CATÉGORIE</Lbl>
+          <div style={{ display:'flex', gap:6 }}>
+            {cats.map(c => <Chip key={c.id} label={c.label} active={cat===c.id} onClick={() => handleCat(c.id)} T={T} />)}
+          </div>
+        </div>
+
+        {/* Exercice */}
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          <Lbl T={T}>EXERCICE</Lbl>
+          <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+            {exercises.map(ex => (
+              <Chip key={ex} label={ex} active={!isCustom && exercise===ex} onClick={() => { setExercise(ex); setIsCustom(false); }} T={T} />
+            ))}
+            <Chip label="Autre…" active={isCustom} onClick={() => setIsCustom(true)} T={T} />
+          </div>
+          {isCustom && (
+            <input value={custom} onChange={e => setCustom(e.target.value)} placeholder="Nom de l'exercice…" style={inputStyle}/>
+          )}
+        </div>
+
+        {/* Type de PR */}
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          <Lbl T={T}>TYPE</Lbl>
+          <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+            {RM_OPTIONS.map(r => <Chip key={r} label={r} active={rmType===r} onClick={() => setRmType(r)} T={T} />)}
+          </div>
+        </div>
+
+        {/* Valeur + unité */}
+        <Card T={T} style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          <div style={{ display:'flex', gap:10, alignItems:'flex-end' }}>
+            <div style={{ flex:1, display:'flex', flexDirection:'column', gap:4 }}>
+              <Lbl T={T}>NOUVELLE VALEUR</Lbl>
+              <input
+                value={value}
+                onChange={e => setValue(e.target.value)}
+                placeholder={cat === 'halte' ? 'ex: 107.5' : cat === 'gymn' ? 'ex: 34' : 'ex: 3:45'}
+                style={{ ...inputStyle, fontSize:28, fontWeight:700, color: isPR ? T.accentColor : T.textPrimary, padding:'10px 12px', textAlign:'center' }}
+              />
+            </div>
+            <div style={{ width:72, display:'flex', flexDirection:'column', gap:4 }}>
+              <Lbl T={T}>UNITÉ</Lbl>
+              <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                {unitOptions.map(u => (
+                  <button key={u} onClick={() => setUnit(u)} style={{ padding:'7px 0', borderRadius:8, border:'none', background: unit===u ? T.accentColor : T.bg3, color: unit===u ? T.bg0 : T.textSecondary, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'DM Mono' }}>{u}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* PR précédent + delta */}
+          <div style={{ display:'flex', gap:10 }}>
+            <div style={{ flex:1, display:'flex', flexDirection:'column', gap:4 }}>
+              <Lbl T={T}>PR PRÉCÉDENT</Lbl>
+              <input value={prevPR} onChange={e => setPrevPR(e.target.value)} style={{ ...inputStyle, fontSize:16 }}/>
+            </div>
+            {value && prevPR && (
+              <div style={{ width:80, display:'flex', flexDirection:'column', gap:4 }}>
+                <Lbl T={T}>PROGRESSION</Lbl>
+                <div style={{ background:T.bg3, borderRadius:8, padding:'9px 0', textAlign:'center', fontSize:16, fontWeight:700, color: isPR ? '#5abf7a' : '#e03050' }}>
+                  {cat === 'halte' || cat === 'gymn'
+                    ? `${Number(value.replace(',','.')) >= Number(prevPR.replace(',','.')) ? '+' : ''}${(Number(value.replace(',','.'))-Number(prevPR.replace(',','.'))).toFixed(1).replace('.0','')}`
+                    : '–'}
+                  {cat === 'halte' ? ' kg' : cat === 'gymn' ? '' : ''}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Badge PR */}
+          {isPR && (
+            <div style={{ display:'flex', alignItems:'center', gap:10, background:`rgba(184,255,87,.08)`, border:`1px solid rgba(184,255,87,.2)`, borderRadius:10, padding:'10px 14px' }}>
+              <span style={{ fontSize:22 }}>🏆</span>
+              <div>
+                <div style={{ fontSize:14, fontWeight:700, color:T.accentColor }}>Nouveau PR !</div>
+                <div style={{ fontSize:12, color:T.textMuted }}>Record personnel battu</div>
+              </div>
+            </div>
+          )}
+        </Card>
+
+        {/* Date */}
+        <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+          <Lbl T={T}>DATE</Lbl>
+          <input value={date} onChange={e => setDate(e.target.value)} style={inputStyle}/>
+        </div>
+
+        {/* Notes */}
+        <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+          <Lbl T={T}>NOTES</Lbl>
+          <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Conditions, sensations…" style={{ ...inputStyle, height:56, resize:'none', lineHeight:1.5 }}></textarea>
+        </div>
+
+        {/* Save */}
+        <button onClick={handleSave} style={{ width:'100%', height:52, borderRadius:T.cardRadius, background: saved ? '#5abf7a' : T.accentColor, color:T.bg0, fontSize:17, fontWeight:700, fontFamily:'DM Sans', border:'none', cursor:'pointer', transition:'background .25s' }}>
+          {saved ? '🏆 PR enregistré !' : 'Enregistrer le PR'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// SCREEN: HISTORIQUE (avec calendrier)
+// ─────────────────────────────────────────────────────────
+
+// Jours du mois d'avril 2026 (mercredi = 1er)
+const APRIL_SESSIONS = { 2:true, 5:true, 7:true, 9:true, 12:true, 14:true, 16:true, 19:true, 21:true, 23:true, 26:true, 28:true, 30:true };
+const CAL_DAYS = ['L','M','M','J','V','S','D'];
+
+function MiniCalendar({ T, onSelectDay, selectedDay }) {
+  // Avril 2026 : 1er = mercredi (index 2)
+  const firstDow = 2; // 0=Lun
+  const daysInMonth = 30;
+  const cells = [];
+  for (let i = 0; i < firstDow; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  return (
+    <div style={{ background:T.bg2, borderRadius:T.cardRadius, padding:'12px 14px' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+        <span style={{ fontSize:14, fontWeight:600, color:T.textPrimary }}>Avril 2026</span>
+        <div style={{ display:'flex', gap:6 }}>
+          <button style={{ background:'none', border:'none', color:T.textMuted, fontSize:16, cursor:'pointer', padding:'0 4px' }}>‹</button>
+          <button style={{ background:'none', border:'none', color:T.textMuted, fontSize:16, cursor:'pointer', padding:'0 4px' }}>›</button>
+        </div>
+      </div>
+      {/* En-têtes jours */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2, marginBottom:4 }}>
+        {CAL_DAYS.map((d,i) => (
+          <div key={i} style={{ textAlign:'center', fontSize:9, fontFamily:'DM Mono', color:T.textMuted, padding:'2px 0' }}>{d}</div>
+        ))}
+      </div>
+      {/* Cellules */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:3 }}>
+        {cells.map((d, i) => {
+          if (!d) return <div key={i}></div>;
+          const hasSession = !!APRIL_SESSIONS[d];
+          const isSelected = selectedDay === d;
+          return (
+            <button key={i} onClick={() => onSelectDay(hasSession ? d : null)} style={{
+              width:'100%', aspectRatio:'1', borderRadius:6, border:'none', cursor: hasSession ? 'pointer' : 'default',
+              background: isSelected ? T.accentColor : hasSession ? T.bg3 : 'transparent',
+              color: isSelected ? T.bg0 : hasSession ? T.textPrimary : T.textMuted,
+              fontSize:11, fontWeight: hasSession ? 600 : 400, fontFamily:'DM Mono',
+              position:'relative', display:'flex', alignItems:'center', justifyContent:'center',
+              transition:'background .15s'
+            }}>
+              {d}
+              {hasSession && !isSelected && (
+                <div style={{ position:'absolute', bottom:2, left:'50%', transform:'translateX(-50%)', width:4, height:4, borderRadius:'50%', background:T.accentColor }}></div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function HistoScreen({ T, onNewWod }) {
+  const [viewMode, setViewMode] = React.useState('liste'); // 'liste' | 'calendrier'
+  const [filter, setFilter] = React.useState('Tous');
+  const [selected, setSelected] = React.useState(null);
+  const [calDay, setCalDay] = React.useState(null);
+
+  const filtered = filter === 'Tous' ? HISTORY
+    : filter === 'Avr 26' ? HISTORY.filter(w => w.date.includes('Avr'))
+    : HISTORY;
+
+  // Séance du jour sélectionné dans le calendrier
+  const calSession = calDay ? HISTORY.find(w => w.date.includes(`${calDay} Avr`)) : null;
+
+  if (selected) {
+    const w = selected;
+    return (
+      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+        <div style={{ padding:'2px 22px 14px', flexShrink:0, display:'flex', alignItems:'center', gap:12 }}>
+          <button onClick={() => setSelected(null)} style={{ background:T.bg2, border:'none', borderRadius:10, width:36, height:36, color:T.textSecondary, fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>←</button>
+          <div>
+            <Lbl T={T}>{w.type}</Lbl>
+            <div style={{ fontSize:24, fontWeight:700, color:T.textPrimary, lineHeight:1.2 }}>{w.name}</div>
+          </div>
+        </div>
+        <div style={{ flex:1, overflowY:'auto', padding:'0 22px 20px', display:'flex', flexDirection:'column', gap:12 }}>
+          <Card T={T} style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <Lbl T={T}>RÉSULTAT</Lbl>
+              <div style={{ fontSize:36, fontWeight:700, color:T.accentColor, lineHeight:1.1, marginTop:4 }}>{w.result}</div>
+            </div>
+            <div style={{ background:T.bg3, borderRadius:10, padding:'6px 16px' }}>
+              <span style={{ fontSize:15, fontWeight:600, color:T.textPrimary }}>{w.scale}</span>
+            </div>
+          </Card>
+          <Card T={T} style={{ display:'flex', flexDirection:'column', gap:12 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+              <div>
+                <Lbl T={T}>BOX</Lbl>
+                <div style={{ fontSize:16, fontWeight:600, color:T.textPrimary, marginTop:3 }}>{w.box}</div>
+                <div style={{ fontSize:13, color:T.textMuted, marginTop:1 }}>{w.city}</div>
+              </div>
+              {w.drop && (
+                <div style={{ background:`rgba(240,160,80,.12)`, border:`1px solid rgba(240,160,80,.25)`, borderRadius:8, padding:'4px 12px', color:T.dropColor, fontSize:11, fontFamily:'DM Mono' }}>✈ DROP-IN</div>
+              )}
+            </div>
+            <div style={{ height:1, background:T.bg3 }}></div>
+            <div>
+              <Lbl T={T}>COACH</Lbl>
+              <div style={{ fontSize:16, fontWeight:600, color:T.textPrimary, marginTop:3 }}>👤 {w.coach}</div>
+            </div>
+          </Card>
+          <Card T={T}>
+            <Lbl T={T}>DATE</Lbl>
+            <div style={{ fontSize:17, fontWeight:600, color:T.textPrimary, marginTop:4 }}>{w.date}</div>
+          </Card>
+          {w.garmin && (
+            <GarminCard cal={w.garmin.cal} fcMax={w.garmin.fcMax} z2={w.garmin.z2} z3={w.garmin.z3} z4={w.garmin.z4} z5={w.garmin.z5} T={T} />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+      <div style={{ padding:'2px 22px 10px', flexShrink:0 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+          <div>
+            <Lbl T={T}>SÉANCES</Lbl>
+            <div style={{ fontSize:26, fontWeight:700, color:T.textPrimary, lineHeight:1.2, marginTop:4 }}>Historique</div>
+          </div>
+          <div style={{ display:'flex', gap:8, alignItems:'center', marginTop:4 }}>
+            {/* Toggle vue */}
+            <div style={{ display:'flex', background:T.bg2, borderRadius:10, padding:3, gap:2 }}>
+              <button onClick={() => setViewMode('liste')} style={{ padding:'4px 10px', borderRadius:8, border:'none', background: viewMode==='liste' ? T.bg3 : 'transparent', color: viewMode==='liste' ? T.textPrimary : T.textMuted, fontSize:12, cursor:'pointer', fontFamily:'DM Mono' }}>≡</button>
+              <button onClick={() => setViewMode('calendrier')} style={{ padding:'4px 10px', borderRadius:8, border:'none', background: viewMode==='calendrier' ? T.bg3 : 'transparent', color: viewMode==='calendrier' ? T.textPrimary : T.textMuted, fontSize:12, cursor:'pointer', fontFamily:'DM Mono' }}>▦</button>
+            </div>
+            <button onClick={onNewWod} style={{ background:T.accentColor, border:'none', borderRadius:12, width:38, height:38, fontSize:22, color:T.bg0, cursor:'pointer', fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>+</button>
+          </div>
+        </div>
+      </div>
+
+      {/* VUE LISTE */}
+      {viewMode === 'liste' && (<>
+        <div style={{ display:'flex', gap:8, padding:'0 22px 12px', overflowX:'auto', flexShrink:0 }}>
+          {['Tous','Mai 26','Avr 26','Mar 26'].map(m => <Chip key={m} label={m} active={filter===m} onClick={() => setFilter(m)} T={T} />)}
+        </div>
+        <div style={{ flex:1, overflowY:'auto', padding:'0 22px', display:'flex', flexDirection:'column', gap:10 }}>
+          {filtered.map(w => (
+            <button key={w.id} onClick={() => setSelected(w)} style={{ background:T.bg2, borderRadius:T.cardRadius, padding:'14px 16px', border:'none', cursor:'pointer', textAlign:'left', display:'flex', flexDirection:'column', gap:6, width:'100%' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+                  <span style={{ fontSize:10, fontFamily:'DM Mono', color:T.accentColor, letterSpacing:'.06em' }}>{w.type}</span>
+                  {w.drop && <span style={{ fontSize:10, fontFamily:'DM Mono', background:`rgba(240,160,80,.12)`, color:T.dropColor, padding:'2px 8px', borderRadius:6 }}>✈ DROP-IN</span>}
+                </div>
+                <span style={{ fontSize:11, fontFamily:'DM Mono', color:T.textMuted, flexShrink:0 }}>{w.date}</span>
+              </div>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
+                <span style={{ fontSize:20, fontWeight:700, color:T.textPrimary }}>{w.name}</span>
+                <span style={{ fontSize:18, fontWeight:700, color:T.accentColor }}>{w.result}</span>
+              </div>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <span style={{ fontSize:12, color:T.textMuted }}>📍 {w.box} · 👤 {w.coach}</span>
+                {w.garmin && (
+                  <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                    <span style={{ fontSize:11, fontFamily:'DM Mono', color:T.textMuted }}>{w.garmin.cal} kcal</span>
+                    <span style={{ fontSize:11, fontFamily:'DM Mono', color:'#e03050' }}>♥ {w.garmin.fcMax}</span>
+                    <span style={{ fontSize:11, fontFamily:'DM Mono', color:'#4abf7a' }}>Z2 {w.garmin.z2}%</span>
+                  </div>
+                )}
+              </div>
+            </button>
+          ))}
+          <div style={{ height:16 }}></div>
+        </div>
+      </>)}
+
+      {/* VUE CALENDRIER */}
+      {viewMode === 'calendrier' && (
+        <div style={{ flex:1, overflowY:'auto', padding:'0 22px', display:'flex', flexDirection:'column', gap:12 }}>
+          <MiniCalendar T={T} onSelectDay={setCalDay} selectedDay={calDay} />
+          {/* Séance du jour sélectionné */}
+          {calDay && calSession && (
+            <button onClick={() => setSelected(calSession)} style={{ background:T.bg2, borderRadius:T.cardRadius, padding:'14px 16px', border:`1px solid ${T.accentColor}33`, cursor:'pointer', textAlign:'left', display:'flex', flexDirection:'column', gap:6, width:'100%' }}>
+              <div style={{ display:'flex', justifyContent:'space-between' }}>
+                <span style={{ fontSize:10, fontFamily:'DM Mono', color:T.accentColor }}>{calSession.type}</span>
+                <span style={{ fontSize:11, fontFamily:'DM Mono', color:T.textMuted }}>{calSession.date}</span>
+              </div>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
+                <span style={{ fontSize:20, fontWeight:700, color:T.textPrimary }}>{calSession.name}</span>
+                <span style={{ fontSize:18, fontWeight:700, color:T.accentColor }}>{calSession.result}</span>
+              </div>
+              <span style={{ fontSize:12, color:T.textMuted }}>Voir le détail →</span>
+            </button>
+          )}
+          {calDay && !calSession && (
+            <div style={{ background:T.bg2, borderRadius:T.cardRadius, padding:'16px', textAlign:'center' }}>
+              <div style={{ fontSize:24, marginBottom:6 }}>😴</div>
+              <div style={{ fontSize:14, color:T.textMuted }}>Repos ce jour-là</div>
+            </div>
+          )}
+          {!calDay && (
+            <div style={{ background:T.bg2, borderRadius:T.cardRadius, padding:'16px', textAlign:'center' }}>
+              <div style={{ fontSize:13, color:T.textMuted }}>Sélectionne un jour pour voir la séance</div>
+              <div style={{ fontSize:11, color:T.textMuted, marginTop:4, fontFamily:'DM Mono' }}>Les points verts = séances enregistrées</div>
+            </div>
+          )}
+          <div style={{ height:16 }}></div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// SCREEN: PR
+// ─────────────────────────────────────────────────────────
+function PRScreen({ T, onNewPR }) {
+  const [cat, setCat] = React.useState('halte');
+  const [expanded, setExpanded] = React.useState(null);
+  const cats = [{ id:'halte', label:'Haltéro' }, { id:'gymn', label:'Gymn.' }, { id:'cardio', label:'Cardio' }, { id:'bench', label:'Benchmark' }];
+  const prs = PR_DATA[cat];
+  const months = ['S','O','N','D','J','F','A'];
+
+  return (
+    <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+      <div style={{ padding:'2px 22px 10px', flexShrink:0 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+          <div>
+            <Lbl T={T}>RECORDS PERSONNELS</Lbl>
+            <div style={{ fontSize:26, fontWeight:700, color:T.textPrimary, lineHeight:1.2, marginTop:4, marginBottom:12 }}>Mes PR</div>
+          </div>
+          <button onClick={onNewPR} style={{ background:T.accentColor, border:'none', borderRadius:12, width:40, height:40, fontSize:24, color:T.bg0, cursor:'pointer', fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:4 }}>+</button>
+        </div>
+        <div style={{ display:'flex', gap:8, overflowX:'auto' }}>
+          {cats.map(c => <Chip key={c.id} label={c.label} active={cat===c.id} onClick={() => { setCat(c.id); setExpanded(null); }} T={T} />)}
+        </div>
+      </div>
+      <div style={{ flex:1, overflowY:'auto', padding:'0 22px', display:'flex', flexDirection:'column', gap:8 }}>
+        {prs.map((p, i) => (
+          <div key={i} style={{ borderRadius:T.cardRadius, overflow:'hidden' }}>
+            <button onClick={() => setExpanded(expanded===i ? null : i)} style={{ width:'100%', background:T.bg2, padding:'13px 16px', border:'none', cursor:'pointer', textAlign:'left', display:'flex', alignItems:'center', gap:12 }}>
+              <div style={{ width:3, height:34, borderRadius:2, background:T.accentColor, flexShrink:0 }}></div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:17, fontWeight:600, color:T.textPrimary }}>{p.name}</div>
+                <div style={{ fontSize:11, fontFamily:'DM Mono', color:T.textMuted, marginTop:2 }}>{p.date}</div>
+              </div>
+              <div style={{ textAlign:'right' }}>
+                <div style={{ fontSize:22, fontWeight:700, color:T.accentColor }}>{p.pr}</div>
+                <div style={{ fontSize:11, color:'#5abf7a', marginTop:1 }}>▲ {p.trend}</div>
+              </div>
+              <span style={{ color:T.textMuted, fontSize:13, transform: expanded===i ? 'rotate(180deg)' : 'none', transition:'transform .2s', display:'inline-block', marginLeft:2 }}>▾</span>
+            </button>
+            {expanded === i && (
+              <div style={{ background:T.bg1, padding:'12px 16px', borderTop:`1px solid ${T.bg3}` }}>
+                <Lbl T={T} style={{ display:'block', marginBottom:10 }}>ÉVOLUTION — 7 MOIS</Lbl>
+                <MiniBar data={p.history.map((v,j) => ({ v, l:months[j] }))} T={T} height={72} />
+              </div>
+            )}
+          </div>
+        ))}
+        <div style={{ height:16 }}></div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// GARMIN STATS DATA
+// ─────────────────────────────────────────────────────────
+const GARMIN_MONTHLY = [
+  { m:'Oct', cal:3800, z2:31, z3:28, z4:24, z5:10, fcAvg:154 },
+  { m:'Nov', cal:4600, z2:33, z3:30, z4:22, z5:9,  fcAvg:157 },
+  { m:'Déc', cal:4200, z2:35, z3:27, z4:23, z5:8,  fcAvg:155 },
+  { m:'Jan', cal:5100, z2:30, z3:32, z4:25, z5:11, fcAvg:160 },
+  { m:'Fév', cal:5600, z2:28, z3:34, z4:26, z5:12, fcAvg:162 },
+  { m:'Mar', cal:5200, z2:32, z3:31, z4:24, z5:10, fcAvg:158 },
+  { m:'Avr', cal:6100, z2:29, z3:33, z4:27, z5:13, fcAvg:163 },
+];
+
+// ─────────────────────────────────────────────────────────
+// SCREEN: STATS
+// ─────────────────────────────────────────────────────────
+function StatsScreen({ T }) {
+  const [section, setSection] = React.useState('perfs');
+  const [view, setView] = React.useState('volume');
+  const [garminView, setGarminView] = React.useState('calories');
+
+  const totalKg = STATS_MONTHLY.reduce((s,m) => s+m.kg, 0);
+  const totalSessions = STATS_MONTHLY.reduce((s,m) => s+m.sessions, 0);
+  const totalPRs = STATS_MONTHLY.reduce((s,m) => s+m.prs, 0);
+  const totalCal = GARMIN_MONTHLY.reduce((s,m) => s+m.cal, 0);
+  const avgZ2 = Math.round(GARMIN_MONTHLY.reduce((s,m) => s+m.z2, 0) / GARMIN_MONTHLY.length);
+  const avgZ3 = Math.round(GARMIN_MONTHLY.reduce((s,m) => s+m.z3, 0) / GARMIN_MONTHLY.length);
+
+  const bigStat = view==='volume' ? `${(totalKg/1000).toFixed(1)}T` : view==='sessions' ? `${totalSessions}` : `${totalPRs}`;
+  const subStat = view==='volume' ? `~${(totalKg/7000).toFixed(1)}T / mois` : view==='sessions' ? `~${(totalSessions/7).toFixed(1)} / mois` : `~${(totalPRs/7).toFixed(1)} / mois`;
+  const thisMonth = view==='volume' ? '6.8T' : view==='sessions' ? '14' : '3';
+
+  return (
+    <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+      <div style={{ padding:'2px 22px 10px', flexShrink:0 }}>
+        <Lbl T={T}>STATISTIQUES</Lbl>
+        <div style={{ fontSize:26, fontWeight:700, color:T.textPrimary, lineHeight:1.2, marginTop:4, marginBottom:12 }}>Mes Stats</div>
+        {/* Onglets section */}
+        <div style={{ display:'flex', gap:6 }}>
+          <Chip label="Perfs" active={section==='perfs'} onClick={() => setSection('perfs')} T={T} />
+          <Chip label="Garmin ❤️" active={section==='garmin'} onClick={() => setSection('garmin')} T={T} />
+        </div>
+      </div>
+
+      <div style={{ flex:1, overflowY:'auto', padding:'0 22px', display:'flex', flexDirection:'column', gap:12 }}>
+
+        {/* ── SECTION PERFS ── */}
+        {section === 'perfs' && (<>
+          <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+            {[{id:'volume',l:'Volume kg'},{id:'sessions',l:'Séances'},{id:'prs',l:'PR'}].map(v => (
+              <Chip key={v.id} label={v.l} active={view===v.id} onClick={() => setView(v.id)} T={T} />
+            ))}
+          </div>
+          <Card T={T}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16 }}>
+              <div>
+                <Lbl T={T}>{view==='volume'?'VOLUME TOTAL (7 MOIS)':view==='sessions'?'SÉANCES TOTALES':'PR TOTAUX'}</Lbl>
+                <div style={{ fontSize:44, fontWeight:700, color:T.accentColor, lineHeight:1, marginTop:6 }}>{bigStat}</div>
+                <div style={{ fontSize:13, color:T.textMuted, marginTop:4 }}>{subStat}</div>
+              </div>
+              <div style={{ background:T.bg3, borderRadius:10, padding:'10px 14px', textAlign:'center' }}>
+                <Lbl T={T}>CE MOIS</Lbl>
+                <div style={{ fontSize:22, fontWeight:700, color:T.textPrimary, marginTop:4 }}>{thisMonth}</div>
+              </div>
+            </div>
+            <MiniBar data={STATS_MONTHLY.map(m => ({ v: view==='volume'?m.kg:view==='sessions'?m.sessions:m.prs, l:m.m.slice(0,3) }))} T={T} height={80} />
+          </Card>
+          <Card T={T}>
+            <Lbl T={T} style={{ display:'block', marginBottom:12 }}>RÉPARTITION BOX / DROP-IN</Lbl>
+            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+              {[{l:'Ma box', v:72, c:T.accentColor},{l:'Drop-in', v:28, c:T.dropColor}].map(b => (
+                <div key={b.l}>
+                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
+                    <span style={{ fontSize:14, color:T.textSecondary }}>{b.l}</span>
+                    <span style={{ fontSize:15, fontWeight:700, color:b.c }}>{b.v}%</span>
+                  </div>
+                  <div style={{ height:6, background:T.bg3, borderRadius:3, overflow:'hidden' }}>
+                    <div style={{ width:`${b.v}%`, height:'100%', background:b.c, borderRadius:3 }}></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+          <Card T={T}>
+            <Lbl T={T} style={{ display:'block', marginBottom:12 }}>TOP COACHS</Lbl>
+            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+              {[{n:'Romain',s:24},{n:'Alex',s:18},{n:'Julie',s:11},{n:'Maria',s:7}].map((c,i) => (
+                <div key={i} style={{ display:'flex', alignItems:'center', gap:10 }}>
+                  <div style={{ width:26, height:26, borderRadius:'50%', background:T.bg3, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, color:T.textMuted, fontFamily:'DM Mono', flexShrink:0 }}>{i+1}</div>
+                  <span style={{ flex:1, fontSize:15, color:T.textPrimary }}>{c.n}</span>
+                  <span style={{ fontSize:12, color:T.textMuted, fontFamily:'DM Mono' }}>{c.s} séances</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </>)}
+
+        {/* ── SECTION GARMIN ── */}
+        {section === 'garmin' && (<>
+          {/* Résumé 3 stats */}
+          <div style={{ display:'flex', gap:8 }}>
+            <div style={{ flex:1, background:T.bg2, borderRadius:T.cardRadius, padding:'12px 12px' }}>
+              <Lbl T={T}>CALORIES TOTALES</Lbl>
+              <div style={{ fontSize:26, fontWeight:700, color:T.textPrimary, lineHeight:1.1, marginTop:4 }}>{(totalCal/1000).toFixed(1)}<span style={{ fontSize:14, color:T.textMuted }}>k</span></div>
+              <div style={{ fontSize:11, color:T.textMuted }}>kcal sur 7 mois</div>
+            </div>
+            <div style={{ flex:1, background:T.bg2, borderRadius:T.cardRadius, padding:'12px 12px' }}>
+              <Lbl T={T}>ZONE 2 MOY.</Lbl>
+              <div style={{ fontSize:26, fontWeight:700, color:'#4abf7a', lineHeight:1.1, marginTop:4 }}>{avgZ2}<span style={{ fontSize:14, color:T.textMuted }}>%</span></div>
+              <div style={{ fontSize:11, color:T.textMuted }}>endurance de base</div>
+            </div>
+          </div>
+
+          {/* Sélecteur vue Garmin */}
+          <div style={{ display:'flex', gap:6 }}>
+            {[{id:'calories',l:'Calories'},{id:'zones',l:'Zones'},{id:'fc',l:'FC moy.'}].map(v => (
+              <Chip key={v.id} label={v.l} active={garminView===v.id} onClick={() => setGarminView(v.id)} T={T} />
+            ))}
+          </div>
+
+          {/* Chart calories / mois */}
+          {garminView === 'calories' && (
+            <Card T={T}>
+              <Lbl T={T} style={{ display:'block', marginBottom:4 }}>CALORIES / MOIS</Lbl>
+              <div style={{ fontSize:13, color:T.textMuted, marginBottom:12 }}>Avr : <span style={{ color:T.accentColor, fontWeight:700 }}>6 100 kcal</span> · record</div>
+              <MiniBar data={GARMIN_MONTHLY.map(m => ({ v:m.cal, l:m.m.slice(0,3) }))} T={T} height={80} barColor={T.accentColor} />
+            </Card>
+          )}
+
+          {/* Zones empilées / mois */}
+          {garminView === 'zones' && (
+            <Card T={T}>
+              <Lbl T={T} style={{ display:'block', marginBottom:12 }}>RÉPARTITION ZONES / MOIS</Lbl>
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                {GARMIN_MONTHLY.map((m, i) => {
+                  const z1 = Math.max(0, 100 - m.z2 - m.z3 - m.z4 - m.z5);
+                  return (
+                    <div key={i} style={{ display:'flex', alignItems:'center', gap:8 }}>
+                      <span style={{ fontSize:9, fontFamily:'DM Mono', color:T.textMuted, width:26, flexShrink:0 }}>{m.m.slice(0,3)}</span>
+                      <div style={{ flex:1, height:10, borderRadius:5, overflow:'hidden', display:'flex' }}>
+                        {[z1, m.z2, m.z3, m.z4, m.z5].map((v, j) => v > 0 && (
+                          <div key={j} style={{ width:`${v}%`, background:ZONE_COLORS[j] }}></div>
+                        ))}
+                      </div>
+                      <span style={{ fontSize:9, fontFamily:'DM Mono', color:'#4abf7a', width:30, textAlign:'right', flexShrink:0 }}>Z2 {m.z2}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* légende */}
+              <div style={{ display:'flex', gap:10, marginTop:12, flexWrap:'wrap' }}>
+                {['Z1','Z2','Z3','Z4','Z5'].map((z,i) => (
+                  <div key={z} style={{ display:'flex', alignItems:'center', gap:3 }}>
+                    <div style={{ width:8, height:8, borderRadius:'50%', background:ZONE_COLORS[i] }}></div>
+                    <span style={{ fontSize:10, fontFamily:'DM Mono', color:T.textMuted }}>{z}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* FC moyenne / mois */}
+          {garminView === 'fc' && (
+            <Card T={T}>
+              <Lbl T={T} style={{ display:'block', marginBottom:4 }}>FC MOYENNE / MOIS</Lbl>
+              <div style={{ fontSize:13, color:T.textMuted, marginBottom:12 }}>Avr : <span style={{ color:'#e03050', fontWeight:700 }}>163 bpm</span></div>
+              <MiniBar data={GARMIN_MONTHLY.map(m => ({ v:m.fcAvg, l:m.m.slice(0,3) }))} T={T} height={80} barColor='#e03050' />
+            </Card>
+          )}
+
+          {/* Z2 cumulé + objectif */}
+          <Card T={T}>
+            <Lbl T={T} style={{ display:'block', marginBottom:10 }}>ZONE 2 — TENDANCE</Lbl>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+              <div>
+                <div style={{ fontSize:13, color:T.textSecondary }}>Moy. Z2+Z3 sur 7 mois</div>
+                <div style={{ fontSize:28, fontWeight:700, color:'#4abf7a' }}>{avgZ2+avgZ3}<span style={{ fontSize:14, color:T.textMuted }}>%</span></div>
+              </div>
+              <div style={{ textAlign:'right' }}>
+                <div style={{ fontSize:11, color:T.textMuted, fontFamily:'DM Mono' }}>OBJECTIF</div>
+                <div style={{ fontSize:18, fontWeight:700, color:T.textSecondary }}>60%</div>
+              </div>
+            </div>
+            <div style={{ height:8, background:T.bg3, borderRadius:4, overflow:'hidden' }}>
+              <div style={{ width:`${avgZ2+avgZ3}%`, height:'100%', background:'linear-gradient(to right, #4abf7a, #4a9eff)', borderRadius:4 }}></div>
+            </div>
+            <div style={{ display:'flex', justifyContent:'space-between', marginTop:4 }}>
+              <span style={{ fontSize:10, fontFamily:'DM Mono', color:'#4abf7a' }}>{avgZ2+avgZ3}% atteint</span>
+              <span style={{ fontSize:10, fontFamily:'DM Mono', color:T.textMuted }}>objectif 60%</span>
+            </div>
+          </Card>
+        </>)}
+
+        <div style={{ height:16 }}></div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// ÉCRAN COUVERTURE SAMSUNG FLIP 7
+// Format : 260×600px, compact, lecture rapide
+// ─────────────────────────────────────────────────────────
+function FlipCoverScreen({ T }) {
+  const last = HISTORY[0];
+  const totalCal = GARMIN_MONTHLY.reduce((s,m) => s+m.cal, 0);
+  const [time, setTime] = React.useState(new Date());
+  React.useEffect(() => {
+    const id = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const hh = String(time.getHours()).padStart(2,'0');
+  const mm = String(time.getMinutes()).padStart(2,'0');
+
+  return (
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'32px 0' }}>
+      {/* Shell Flip fermé */}
+      <div style={{ width:260, background:T.bg0, borderRadius:32, overflow:'hidden', boxShadow:`0 0 0 1.5px #2e2e3e, 0 20px 60px rgba(0,0,0,.7)`, display:'flex', flexDirection:'column' }}>
+        {/* Bande caméra externe */}
+        <div style={{ height:10, background:'#111', display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <div style={{ width:8, height:5, borderRadius:3, background:'#222' }}></div>
+        </div>
+
+        {/* Écran couverture */}
+        <div style={{ padding:'20px 20px 24px', display:'flex', flexDirection:'column', gap:16 }}>
+          {/* Heure */}
+          <div style={{ textAlign:'center' }}>
+            <div style={{ fontSize:52, fontWeight:700, color:T.textPrimary, lineHeight:1, fontFamily:'DM Mono', letterSpacing:'-0.03em' }}>{hh}:{mm}</div>
+            <div style={{ fontSize:12, color:T.textMuted, marginTop:4, fontFamily:'DM Mono' }}>Sam 3 Mai 2026</div>
+          </div>
+
+          {/* Dernière séance */}
+          <div style={{ background:T.bg2, borderRadius:14, padding:'12px 14px' }}>
+            <Lbl T={T} style={{ display:'block', marginBottom:6 }}>DERNIÈRE SÉANCE</Lbl>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
+              <span style={{ fontSize:18, fontWeight:700, color:T.textPrimary }}>{last.name}</span>
+              <span style={{ fontSize:16, fontWeight:700, color:T.accentColor }}>{last.result}</span>
+            </div>
+            <div style={{ fontSize:11, color:T.textMuted, marginTop:3 }}>{last.date} · {last.box}</div>
+            {last.garmin && (
+              <div style={{ display:'flex', gap:10, marginTop:8 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                  <div style={{ width:5, height:5, borderRadius:'50%', background:'#e03050' }}></div>
+                  <span style={{ fontSize:11, fontFamily:'DM Mono', color:T.textSecondary }}>{last.garmin.fcMax} bpm</span>
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                  <div style={{ width:5, height:5, borderRadius:'50%', background:T.accentColor }}></div>
+                  <span style={{ fontSize:11, fontFamily:'DM Mono', color:T.textSecondary }}>{last.garmin.cal} kcal</span>
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                  <div style={{ width:5, height:5, borderRadius:'50%', background:'#4abf7a' }}></div>
+                  <span style={{ fontSize:11, fontFamily:'DM Mono', color:'#4abf7a' }}>Z2 {last.garmin.z2}%</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Stats rapides */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+            <div style={{ background:T.bg2, borderRadius:12, padding:'10px 12px' }}>
+              <Lbl T={T} style={{ display:'block', marginBottom:3 }}>CE MOIS</Lbl>
+              <div style={{ fontSize:22, fontWeight:700, color:T.accentColor }}>14</div>
+              <div style={{ fontSize:10, color:T.textMuted }}>séances</div>
+            </div>
+            <div style={{ background:T.bg2, borderRadius:12, padding:'10px 12px' }}>
+              <Lbl T={T} style={{ display:'block', marginBottom:3 }}>PR CE MOIS</Lbl>
+              <div style={{ fontSize:22, fontWeight:700, color:T.accentColor }}>3</div>
+              <div style={{ fontSize:10, color:T.textMuted }}>records</div>
+            </div>
+            <div style={{ background:T.bg2, borderRadius:12, padding:'10px 12px' }}>
+              <Lbl T={T} style={{ display:'block', marginBottom:3 }}>CALORIES AVR.</Lbl>
+              <div style={{ fontSize:22, fontWeight:700, color:T.textPrimary }}>6.1<span style={{ fontSize:12, color:T.textMuted }}>k</span></div>
+              <div style={{ fontSize:10, color:T.textMuted }}>kcal</div>
+            </div>
+            <div style={{ background:T.bg2, borderRadius:12, padding:'10px 12px' }}>
+              <Lbl T={T} style={{ display:'block', marginBottom:3 }}>ZONE 2 MOY.</Lbl>
+              <div style={{ fontSize:22, fontWeight:700, color:'#4abf7a' }}>29<span style={{ fontSize:12, color:T.textMuted }}>%</span></div>
+              <div style={{ fontSize:10, color:T.textMuted }}>aérobie</div>
+            </div>
+          </div>
+
+          {/* Zone bar du mois */}
+          <div style={{ background:T.bg2, borderRadius:12, padding:'10px 12px' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
+              <Lbl T={T}>ZONES AVR.</Lbl>
+              <span style={{ fontSize:10, fontFamily:'DM Mono', color:'#4abf7a' }}>Z2+Z3 62%</span>
+            </div>
+            <div style={{ height:8, borderRadius:4, overflow:'hidden', display:'flex', gap:1 }}>
+              <div style={{ width:'6%',  background:ZONE_COLORS[0] }}></div>
+              <div style={{ width:'29%', background:ZONE_COLORS[1] }}></div>
+              <div style={{ width:'33%', background:ZONE_COLORS[2] }}></div>
+              <div style={{ width:'27%', background:ZONE_COLORS[3] }}></div>
+              <div style={{ width:'13%', background:ZONE_COLORS[4] }}></div>
+            </div>
+            <div style={{ display:'flex', gap:8, marginTop:6 }}>
+              {['Z1','Z2','Z3','Z4','Z5'].map((z,i) => (
+                <div key={z} style={{ display:'flex', alignItems:'center', gap:2 }}>
+                  <div style={{ width:6, height:6, borderRadius:'50%', background:ZONE_COLORS[i] }}></div>
+                  <span style={{ fontSize:9, fontFamily:'DM Mono', color:T.textMuted }}>{z}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Prochain WOD hint */}
+          <div style={{ display:'flex', alignItems:'center', gap:10, background:`rgba(184,255,87,.07)`, border:`1px solid rgba(184,255,87,.15)`, borderRadius:12, padding:'10px 14px' }}>
+            <span style={{ fontSize:20 }}>⚡</span>
+            <div>
+              <div style={{ fontSize:12, fontWeight:600, color:T.accentColor }}>Prochain WOD</div>
+              <div style={{ fontSize:11, color:T.textMuted }}>Lundi 5 Mai — CrossFit SUD</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bord bas */}
+        <div style={{ height:8, background:'#111' }}></div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// ROOT
+// ─────────────────────────────────────────────────────────
+function App() {
+  const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const T = tweaks;
+  const [tab, setTab] = React.useState('wod');
+  const [showNewPR, setShowNewPR] = React.useState(false);
+  const [flipMode, setFlipMode] = React.useState(false);
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:'100vh', background:'#13131d', gap:16, padding:'24px 0' }}>
+      {/* Toggle Flip / App */}
+      <div style={{ display:'flex', background:'rgba(255,255,255,.06)', borderRadius:12, padding:3, gap:2 }}>
+        <button onClick={() => setFlipMode(false)} style={{ padding:'6px 18px', borderRadius:9, border:'none', background: !flipMode ? 'rgba(255,255,255,.12)' : 'transparent', color: !flipMode ? '#e4e2f0' : '#58566e', fontSize:12, fontFamily:'DM Mono', cursor:'pointer', letterSpacing:'.04em' }}>📱 App</button>
+        <button onClick={() => setFlipMode(true)}  style={{ padding:'6px 18px', borderRadius:9, border:'none', background: flipMode  ? 'rgba(255,255,255,.12)' : 'transparent', color: flipMode  ? '#e4e2f0' : '#58566e', fontSize:12, fontFamily:'DM Mono', cursor:'pointer', letterSpacing:'.04em' }}>🔒 Couverture Flip</button>
+      </div>
+
+      {!flipMode && (
+        <div style={{ width:390, height:844, background:T.bg0, borderRadius:44, overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 0 0 1px #2e2e3e, 0 32px 80px rgba(0,0,0,.6)' }}>
+          <StatusBar T={T} />
+          {tab === 'wod'   && <WodScreen T={T} onSaved={() => setTab('histo')} />}
+          {tab === 'histo' && <HistoScreen T={T} onNewWod={() => setTab('wod')} />}
+          {tab === 'pr'    && !showNewPR && <PRScreen T={T} onNewPR={() => setShowNewPR(true)} />}
+          {tab === 'pr'    && showNewPR  && <NewPRScreen T={T} onBack={() => setShowNewPR(false)} onSaved={() => setShowNewPR(false)} />}
+          {tab === 'stats' && <StatsScreen T={T} />}
+          <TabBar active={tab} onTab={(t) => { setTab(t); setShowNewPR(false); }} T={T} />
+        </div>
+      )}
+
+      {flipMode && (
+        <div style={{ background:'#13131d', borderRadius:16, padding:'0', overflow:'hidden' }}>
+          <FlipCoverScreen T={T} />
+        </div>
+      )}
+
+      <TweaksPanel>
+        <TweakSection label="Couleurs principales" />
+        <TweakColor label="Accent" value={T.accentColor} onChange={v => setTweak('accentColor', v)} />
+        <TweakColor label="Drop-in" value={T.dropColor} onChange={v => setTweak('dropColor', v)} />
+        <TweakSection label="Fonds" />
+        <TweakColor label="Fond principal" value={T.bg0} onChange={v => setTweak('bg0', v)} />
+        <TweakColor label="Cards" value={T.bg2} onChange={v => setTweak('bg2', v)} />
+        <TweakColor label="Éléments" value={T.bg3} onChange={v => setTweak('bg3', v)} />
+        <TweakSection label="Mise en page" />
+        <TweakSlider label="Radius cards" value={T.cardRadius} min={4} max={24} step={1} unit="px" onChange={v => setTweak('cardRadius', v)} />
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

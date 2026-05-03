@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CrossFit WOD & PR — Wireframes</title>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #f0ede8; font-family: 'Caveat', cursive; }
+  .canvas-label {
+    position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+    background: #1a1a1a; color: #f0ede8; padding: 6px 18px; border-radius: 20px;
+    font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: .08em;
+    z-index: 100; white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+<div class="canvas-label">CrossFit WOD & PR — Exploration wireframes — Samsung Flip 7</div>
+<div id="root"></div>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel">
+
+/* ─────────────────────────────────────────
+   SHARED PRIMITIVES
+───────────────────────────────────────── */
+
+const Sketch = ({ width = 390, height = 844, children, style = {} }) => (
+  <div style={{
+    width, height,
+    background: '#faf9f6',
+    border: '2.5px solid #1a1a1a',
+    borderRadius: 36,
+    overflow: 'hidden',
+    position: 'relative',
+    boxShadow: '4px 6px 0 #1a1a1a',
+    fontFamily: "'Caveat', cursive",
+    ...style
+  }}>
+    {/* status bar */}
+    <div style={{ height: 36, background: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', borderBottom: '1.5px dashed #ccc' }}>
+      <span style={{ fontSize: 11, fontFamily: 'Space Mono', opacity: .5 }}>9:41</span>
+      <div style={{ width: 80, height: 10, background: '#1a1a1a', borderRadius: 10, opacity: .15 }}></div>
+      <span style={{ fontSize: 11, fontFamily: 'Space Mono', opacity: .5 }}>●●●</span>
+    </div>
+    {children}
+  </div>
+);
+
+const TabBar = ({ tabs, active = 0, theme = 'light' }) => {
+  const bg = theme === 'dark' ? '#111' : '#faf9f6';
+  const border = theme === 'dark' ? '#333' : '#ddd';
+  const fg = theme === 'dark' ? '#fff' : '#1a1a1a';
+  const accent = theme === 'dark' ? '#e8ff47' : '#1a1a1a';
+  return (
+    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 72, background: bg, borderTop: `1.5px solid ${border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-around', padding: '0 8px' }}>
+      {tabs.map((t, i) => (
+        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, opacity: i === active ? 1 : .35 }}>
+          <div style={{ width: 22, height: 22, borderRadius: 4, border: `2px solid ${i === active ? accent : fg}`, background: i === active ? accent : 'transparent' }}></div>
+          <span style={{ fontSize: 12, color: fg, fontFamily: 'Space Mono', fontSize: 9 }}>{t}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const SectionHeader = ({ label, dark }) => (
+  <div style={{ padding: '14px 20px 6px', borderBottom: `1.5px solid ${dark ? '#333' : '#e8e4de'}` }}>
+    <span style={{ fontSize: 22, fontWeight: 700, color: dark ? '#fff' : '#1a1a1a' }}>{label}</span>
+  </div>
+);
+
+const SketchInput = ({ label, value, dark, wide }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: wide ? 1 : 'unset' }}>
+    <span style={{ fontSize: 13, opacity: .6, color: dark ? '#aaa' : '#666', fontFamily: 'Space Mono', fontSize: 9 }}>{label}</span>
+    <div style={{ height: 36, border: `1.5px solid ${dark ? '#444' : '#bbb'}`, borderRadius: 8, background: dark ? '#1e1e1e' : '#f0ede8', display: 'flex', alignItems: 'center', padding: '0 10px', fontSize: 15, color: dark ? '#ddd' : '#333' }}>
+      {value || ''}
+    </div>
+  </div>
+);
+
+const SketchBtn = ({ label, primary, dark, small }) => (
+  <div style={{
+    height: small ? 32 : 44, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: small ? 13 : 17, fontWeight: 700, cursor: 'pointer',
+    background: primary ? (dark ? '#e8ff47' : '#1a1a1a') : 'transparent',
+    color: primary ? (dark ? '#111' : '#fff') : (dark ? '#e8ff47' : '#1a1a1a'),
+    border: primary ? 'none' : `1.5px solid ${dark ? '#e8ff47' : '#1a1a1a'}`,
+    padding: '0 18px'
+  }}>{label}</div>
+);
+
+const Pill = ({ label, active, color = '#e8ff47' }) => (
+  <div style={{ padding: '4px 12px', borderRadius: 20, border: '1.5px solid #1a1a1a', background: active ? '#1a1a1a' : 'transparent', color: active ? '#fff' : '#1a1a1a', fontSize: 13, whiteSpace: 'nowrap' }}>{label}</div>
+);
+
+const PillDark = ({ label, active }) => (
+  <div style={{ padding: '4px 12px', borderRadius: 20, border: `1.5px solid ${active ? '#e8ff47' : '#444'}`, background: active ? '#e8ff47' : 'transparent', color: active ? '#111' : '#aaa', fontSize: 13, whiteSpace: 'nowrap' }}>{label}</div>
+);
+
+const BarChart = ({ data, dark }) => {
+  const max = Math.max(...data.map(d => d.v));
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 64 }}>
+      {data.map((d, i) => (
+        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flex: 1 }}>
+          <div style={{ width: '100%', background: dark ? '#e8ff47' : '#1a1a1a', borderRadius: '3px 3px 0 0', height: `${(d.v / max) * 52}px`, opacity: i === data.length - 1 ? 1 : .3 }}></div>
+          <span style={{ fontSize: 9, fontFamily: 'Space Mono', color: dark ? '#aaa' : '#888' }}>{d.l}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const HatchBg = ({ color = '#ddd' }) => (
+  <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: .4 }} xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <line x1="0" y1="0" x2="0" y2="8" stroke={color} strokeWidth="1"/>
+      </pattern>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#hatch)"/>
+  </svg>
+);
+
+/* ─────────────────────────────────────────
+   DIRECTION A — Dark Intensity
+   Thème sombre, accent jaune fluo, vibes box
+───────────────────────────────────────── */
+
+const A_LogWOD = () => (
+  <Sketch style={{ background: '#111' }}>
+    <div style={{ height: '100%', background: '#111', display: 'flex', flexDirection: 'column' }}>
+      <SectionHeader label="+ Nouveau WOD" dark />
+      <div style={{ flex: 1, padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 12, overflow: 'hidden' }}>
+
+        {/* Date + type */}
+        <div style={{ display: 'flex', gap: 10 }}>
+          <SketchInput label="DATE" value="03/05/26" dark wide />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <span style={{ fontSize: 9, fontFamily: 'Space Mono', color: '#888' }}>FORMAT</span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              {['FOR TIME','AMRAP','EMOM'].map((t,i) => <PillDark key={t} label={t} active={i===0} />)}
+            </div>
+          </div>
+        </div>
+
+        {/* Box info */}
+        <div style={{ background: '#1a1a1a', borderRadius: 10, padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 8, border: '1px solid #2a2a2a' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 16, color: '#fff', fontWeight: 700 }}>📍 Box</span>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <div style={{ padding: '2px 10px', borderRadius: 20, background: '#e8ff47', color: '#111', fontSize: 12, fontWeight: 700 }}>Ma box</div>
+              <div style={{ padding: '2px 10px', borderRadius: 20, border: '1px solid #444', color: '#888', fontSize: 12 }}>Drop-in</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <SketchInput label="NOM BOX" value="CrossFit SUD" dark wide />
+            <SketchInput label="COACH" value="Romain" dark wide />
+          </div>
+        </div>
+
+        {/* Mouvements */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <span style={{ fontSize: 9, fontFamily: 'Space Mono', color: '#888' }}>MOUVEMENTS</span>
+          {[
+            { mv: 'Thrusters', val: '21 reps @ 43kg' },
+            { mv: 'Pull-ups', val: '21 reps' },
+          ].map((m, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#1a1a1a', borderRadius: 8, padding: '8px 12px', border: '1px solid #2a2a2a' }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#e8ff47' }}></div>
+              <span style={{ flex: 1, color: '#fff', fontSize: 16 }}>{m.mv}</span>
+              <span style={{ color: '#888', fontSize: 14 }}>{m.val}</span>
+            </div>
+          ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1.5px dashed #333', borderRadius: 8, padding: '8px 12px' }}>
+            <span style={{ color: '#555', fontSize: 15 }}>+ Ajouter un mouvement…</span>
+          </div>
+        </div>
+
+        {/* Résultat */}
+        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+          <SketchInput label="RÉSULTAT" value="3:47" dark wide />
+          <SketchInput label="SCALE" value="Rx" dark />
+          <SketchBtn label="💾 Sauver" primary dark />
+        </div>
+
+      </div>
+      <TabBar tabs={['WOD','PR','STATS','HISTO']} active={0} theme="dark" />
+    </div>
+  </Sketch>
+);
+
+const A_History = () => (
+  <Sketch style={{ background: '#111' }}>
+    <div style={{ height: '100%', background: '#111', display: 'flex', flexDirection: 'column' }}>
+      <SectionHeader label="Historique" dark />
+      {/* filtre mois */}
+      <div style={{ display: 'flex', gap: 8, padding: '10px 18px', overflowX: 'auto' }}>
+        {['Tous','Mai 26','Avr 26','Mar 26'].map((m,i) => <PillDark key={m} label={m} active={i===0} />)}
+      </div>
+      <div style={{ flex: 1, padding: '0 18px', display: 'flex', flexDirection: 'column', gap: 10, overflow: 'hidden' }}>
+        {[
+          { date: 'Mer 30 Avr', type: 'FOR TIME', name: 'Fran', result: '3:47 Rx', box: 'CrossFit SUD', coach: 'Romain', drop: false },
+          { date: 'Lun 28 Avr', type: 'AMRAP 20', name: 'Cindy', result: '22 rds', box: 'CrossFit BCN', coach: 'Maria', drop: true },
+          { date: 'Sam 26 Avr', type: 'STRENGTH', name: 'Snatch', result: '80kg 1RM', box: 'CrossFit SUD', coach: 'Alex', drop: false },
+        ].map((w, i) => (
+          <div key={i} style={{ background: '#1a1a1a', borderRadius: 12, padding: '12px 14px', border: '1px solid #2a2a2a', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <span style={{ fontSize: 9, fontFamily: 'Space Mono', color: '#e8ff47' }}>{w.type}</span>
+                {w.drop && <span style={{ fontSize: 9, fontFamily: 'Space Mono', background: '#2a1f00', color: '#f5a623', padding: '1px 6px', borderRadius: 4 }}>DROP-IN</span>}
+              </div>
+              <span style={{ fontSize: 12, color: '#555', fontFamily: 'Space Mono' }}>{w.date}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <span style={{ fontSize: 20, fontWeight: 700, color: '#fff' }}>{w.name}</span>
+              <span style={{ fontSize: 18, color: '#e8ff47', fontWeight: 700 }}>{w.result}</span>
+            </div>
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+              <span style={{ fontSize: 12, color: '#666' }}>📍 {w.box} · 👤 {w.coach}</span>
+            </div>
+          </div>
+        ))}
+        <div style={{ height: 80 }}></div>
+      </div>
+      <TabBar tabs={['WOD','PR','STATS','HISTO']} active={3} theme="dark" />
+    </div>
+  </Sketch>
+);
+
+const A_PR = () => (
+  <Sketch style={{ background: '#111' }}>
+    <div style={{ height: '100%', background: '#111', display: 'flex', flexDirection: 'column' }}>
+      <SectionHeader label="Mes PR" dark />
+      <div style={{ display: 'flex', gap: 8, padding: '10px 18px' }}>
+        {['Halté','Gymn','Cardio','Bench'].map((c,i) => <PillDark key={c} label={c} active={i===0} />)}
+      </div>
+      <div style={{ flex: 1, padding: '0 18px', display: 'flex', flexDirection: 'column', gap: 8, overflow: 'hidden' }}>
+        {[
+          { name: 'Clean & Jerk', pr: '105 kg', date: 'Fév 26', trend: '+5kg' },
+          { name: 'Back Squat', pr: '140 kg', date: 'Jan 26', trend: '+10kg' },
+          { name: 'Snatch', pr: '80 kg', date: 'Avr 26', trend: '+2.5kg' },
+          { name: 'Deadlift', pr: '180 kg', date: 'Mar 26', trend: '–' },
+        ].map((p, i) => (
+          <div key={i} style={{ background: '#1a1a1a', borderRadius: 12, padding: '12px 14px', border: '1px solid #2a2a2a', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 4, height: 40, background: '#e8ff47', borderRadius: 2 }}></div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>{p.name}</div>
+              <div style={{ fontSize: 12, color: '#555', fontFamily: 'Space Mono' }}>{p.date}</div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 22, fontWeight: 700, color: '#e8ff47' }}>{p.pr}</div>
+              <div style={{ fontSize: 12, color: p.trend !== '–' ? '#4caf50' : '#555' }}>{p.trend}</div>
+            </div>
+          </div>
+        ))}
+        {/* mini chart */}
+        <div style={{ background: '#1a1a1a', borderRadius: 12, padding: '12px 14px', border: '1px solid #2a2a2a' }}>
+          <div style={{ fontSize: 13, color: '#888', fontFamily: 'Space Mono', marginBottom: 8 }}>CLEAN & JERK — évolution</div>
+          <BarChart data={[{l:'S',v:90},{l:'O',v:95},{l:'N',v:95},{l:'D',v:100},{l:'J',v:100},{l:'F',v:105},{l:'A',v:105}]} dark />
+        </div>
+        <div style={{ height: 80 }}></div>
+      </div>
+      <TabBar tabs={['WOD','PR','STATS','HISTO']} active={1} theme="dark" />
+    </div>
+  </Sketch>
+);
+
+/* ─────────────────────────────────────────
+   DIRECTION B — Clean & Aéré
+   Fond blanc cassé, accents orange chalky, type Caveat fort
+───────────────────────────────────────── */
+
+const B_LogWOD = () => (
+  <Sketch>
+    <div style={{ height: '100%', background: '#faf9f6', display: 'flex', flexDirection: 'column' }}>
+      {/* header gradient */}
+      <div style={{ background: '#ff5722', padding: '10px 20px 14px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <span style={{ fontSize: 11, fontFamily: 'Space Mono', color: 'rgba(255,255,255,.7)', letterSpacing: '.1em' }}>NOUVEAU WOD</span>
+        <span style={{ fontSize: 26, fontWeight: 700, color: '#fff' }}>Samedi 3 Mai</span>
+      </div>
+
+      <div style={{ flex: 1, padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 14, overflow: 'hidden' }}>
+        {/* Format selector */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <span style={{ fontSize: 11, fontFamily: 'Space Mono', color: '#888', letterSpacing: '.08em' }}>FORMAT</span>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {['FOR TIME','AMRAP','EMOM','STRENGTH','CHIPPER'].map((t,i) => (
+              <div key={t} style={{ padding: '5px 12px', borderRadius: 6, background: i===0 ? '#ff5722' : '#f0ede8', color: i===0 ? '#fff' : '#666', fontSize: 14, fontWeight: i===0 ? 700 : 400, border: i===0 ? 'none' : '1.5px solid #e0dbd4' }}>
+                {t}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Box card */}
+        <div style={{ background: '#fff8f5', border: '1.5px solid #ffd5c5', borderRadius: 12, padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ flex: 1, padding: '5px 10px', borderRadius: 8, background: '#ff5722', color: '#fff', fontSize: 14, fontWeight: 700, textAlign: 'center' }}>📍 Ma box</div>
+            <div style={{ flex: 1, padding: '5px 10px', borderRadius: 8, border: '1.5px solid #ddd', color: '#aaa', fontSize: 14, textAlign: 'center' }}>✈️ Drop-in</div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <SketchInput label="BOX" value="CrossFit SUD" wide />
+            <SketchInput label="COACH" value="Romain" />
+          </div>
+        </div>
+
+        {/* WOD mouvements */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <span style={{ fontSize: 11, fontFamily: 'Space Mono', color: '#888', letterSpacing: '.08em' }}>MOUVEMENTS</span>
+          <div style={{ background: '#fff', borderRadius: 10, border: '1.5px solid #e8e4de', overflow: 'hidden' }}>
+            {[
+              { n: 'Thrusters', d: '21 × 43 kg' },
+              { n: 'Pull-ups', d: '21 reps' },
+            ].map((m, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', padding: '10px 14px', borderBottom: i < 1 ? '1px solid #f0ede8' : 'none', gap: 10 }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff5722', flexShrink: 0 }}></div>
+                <span style={{ flex: 1, fontSize: 17 }}>{m.n}</span>
+                <span style={{ fontSize: 15, color: '#999' }}>{m.d}</span>
+                <span style={{ color: '#ccc', fontSize: 18 }}>⠿</span>
+              </div>
+            ))}
+            <div style={{ display: 'flex', alignItems: 'center', padding: '10px 14px', gap: 8 }}>
+              <span style={{ fontSize: 20, color: '#ff5722' }}>+</span>
+              <span style={{ fontSize: 15, color: '#bbb' }}>Ajouter mouvement…</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Résultat row */}
+        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+          <SketchInput label="RÉSULTAT" value="3:47" wide />
+          <SketchInput label="SCALE" value="Rx" />
+        </div>
+        <SketchBtn label="Enregistrer le WOD →" primary />
+      </div>
+      <TabBar tabs={['WOD','PR','STATS','HISTO']} active={0} />
+    </div>
+  </Sketch>
+);
+
+const B_History = () => (
+  <Sketch>
+    <div style={{ height: '100%', background: '#faf9f6', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: '#ff5722', padding: '10px 20px 14px' }}>
+        <span style={{ fontSize: 11, fontFamily: 'Space Mono', color: 'rgba(255,255,255,.7)', letterSpacing: '.1em' }}>HISTORIQUE</span>
+        <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+          {['Tous','Mai','Avr','Mar'].map((m,i) => (
+            <div key={m} style={{ padding: '3px 12px', borderRadius: 20, background: i===0 ? '#fff' : 'rgba(255,255,255,.2)', color: i===0 ? '#ff5722' : '#fff', fontSize: 13, fontWeight: i===0 ? 700 : 400 }}>{m}</div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ flex: 1, padding: '12px 18px', display: 'flex', flexDirection: 'column', gap: 10, overflow: 'hidden' }}>
+        {[
+          { date: 'Mer 30 Avr', type: 'FOR TIME', name: 'Fran', result: '3:47 Rx', box: 'CrossFit SUD', coach: 'Romain', drop: false },
+          { date: 'Lun 28 Avr', type: 'AMRAP 20', name: 'Cindy', result: '22 rds', box: 'CrossFit BCN', coach: 'Maria', drop: true },
+          { date: 'Sam 26 Avr', type: 'STRENGTH', name: 'Snatch 1RM', result: '80 kg', box: 'CrossFit SUD', coach: 'Alex', drop: false },
+        ].map((w, i) => (
+          <div key={i} style={{ background: '#fff', border: `1.5px solid ${w.drop ? '#ffd5c5' : '#e8e4de'}`, borderLeft: `4px solid ${w.drop ? '#ff9800' : '#ff5722'}`, borderRadius: 10, padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 10, fontFamily: 'Space Mono', color: '#ff5722', letterSpacing: '.08em' }}>{w.type} {w.drop && '· ✈️ DROP-IN'}</span>
+              <span style={{ fontSize: 10, fontFamily: 'Space Mono', color: '#bbb' }}>{w.date}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <span style={{ fontSize: 20, fontWeight: 700 }}>{w.name}</span>
+              <span style={{ fontSize: 18, fontWeight: 700, color: '#ff5722' }}>{w.result}</span>
+            </div>
+            <span style={{ fontSize: 12, color: '#aaa' }}>📍 {w.box} · 👤 {w.coach}</span>
+          </div>
+        ))}
+        <div style={{ height: 80 }}></div>
+      </div>
+      <TabBar tabs={['WOD','PR','STATS','HISTO']} active={3} />
+    </div>
+  </Sketch>
+);
+
+const B_PR = () => (
+  <Sketch>
+    <div style={{ height: '100%', background: '#faf9f6', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: '#ff5722', padding: '10px 20px 14px' }}>
+        <span style={{ fontSize: 11, fontFamily: 'Space Mono', color: 'rgba(255,255,255,.7)' }}>MES PR</span>
+        <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+          {['Halté','Gymn','Cardio','Bench'].map((c,i) => (
+            <div key={c} style={{ padding: '3px 12px', borderRadius: 20, background: i===0 ? '#fff' : 'rgba(255,255,255,.2)', color: i===0 ? '#ff5722' : '#fff', fontSize: 13, fontWeight: i===0 ? 700 : 400 }}>{c}</div>
+          ))}
+        </div>
+      </div>
+      <div style={{ flex: 1, padding: '12px 18px', display: 'flex', flexDirection: 'column', gap: 8, overflow: 'hidden' }}>
+        {/* mini stat bar */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[{ l: 'PR ce mois', v: '3' }, { l: 'Total PR', v: '24' }].map(s => (
+            <div key={s.l} style={{ flex: 1, background: '#fff5f2', border: '1.5px solid #ffd5c5', borderRadius: 10, padding: '8px 12px' }}>
+              <div style={{ fontSize: 22, fontWeight: 700, color: '#ff5722' }}>{s.v}</div>
+              <div style={{ fontSize: 10, fontFamily: 'Space Mono', color: '#aaa' }}>{s.l}</div>
+            </div>
+          ))}
+        </div>
+        {[
+          { name: 'Clean & Jerk', pr: '105 kg', date: 'Fév 26', delta: '+5 kg' },
+          { name: 'Back Squat', pr: '140 kg', date: 'Jan 26', delta: '+10 kg' },
+          { name: 'Snatch', pr: '80 kg', date: 'Avr 26', delta: '+2.5 kg' },
+        ].map((p, i) => (
+          <div key={i} style={{ background: '#fff', border: '1.5px solid #e8e4de', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>{p.name}</div>
+              <div style={{ fontSize: 11, fontFamily: 'Space Mono', color: '#bbb' }}>{p.date}</div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 22, fontWeight: 700, color: '#ff5722' }}>{p.pr}</div>
+              <div style={{ fontSize: 11, color: '#4caf50' }}>▲ {p.delta}</div>
+            </div>
+          </div>
+        ))}
+        {/* Évolution chart */}
+        <div style={{ background: '#fff', border: '1.5px solid #e8e4de', borderRadius: 12, padding: '12px 14px' }}>
+          <div style={{ fontSize: 11, fontFamily: 'Space Mono', color: '#bbb', marginBottom: 8 }}>CLEAN & JERK — 7 derniers mois</div>
+          <BarChart data={[{l:'S',v:90},{l:'O',v:95},{l:'N',v:95},{l:'D',v:100},{l:'J',v:100},{l:'F',v:105},{l:'A',v:105}]} />
+        </div>
+        <div style={{ height: 80 }}></div>
+      </div>
+      <TabBar tabs={['WOD','PR','STATS','HISTO']} active={1} />
+    </div>
+  </Sketch>
+);
+
+/* ─────────────────────────────────────────
+   DIRECTION C — Papier quadrillé / Carnet
+   Fond à carreaux, encre bleue, feeling journal d'entraînement
+───────────────────────────────────────── */
+
+const GridBg = ({ dark }) => (
+  <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <pattern id={dark ? 'grid-d' : 'grid-l'} width="20" height="20" patternUnits="userSpaceOnUse">
+        <path d="M 20 0 L 0 0 0 20" fill="none" stroke={dark ? '#1e2a3a' : '#cfe2f3'} strokeWidth="0.8"/>
+      </pattern>
+    </defs>
+    <rect width="100%" height="100%" fill={`url(#${dark ? 'grid-d' : 'grid-l'})`}/>
+  </svg>
+);
+
+const C_LogWOD = () => (
+  <Sketch style={{ background: '#f5f8ff' }}>
+    <div style={{ height: '100%', background: '#f5f8ff', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      <GridBg />
+      {/* header journal */}
+      <div style={{ position: 'relative', padding: '10px 20px 12px', borderBottom: '2.5px solid #1a3a6e' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ fontSize: 11, fontFamily: 'Space Mono', color: '#5c7fc4', letterSpacing: '.1em' }}>JOURNAL D'ENTRAÎNEMENT</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: '#1a3a6e' }}>Samedi 3 Mai</div>
+          </div>
+          <div style={{ width: 36, height: 36, border: '2px solid #1a3a6e', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>+</div>
+        </div>
+      </div>
+
+      <div style={{ flex: 1, padding: '12px 18px', display: 'flex', flexDirection: 'column', gap: 12, position: 'relative', overflow: 'hidden' }}>
+        {/* Format pills */}
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {['FOR TIME','AMRAP','EMOM','STRENGTH'].map((t,i) => (
+            <div key={t} style={{ padding: '4px 12px', borderRadius: 4, background: i===0 ? '#1a3a6e' : 'rgba(26,58,110,.08)', color: i===0 ? '#fff' : '#5c7fc4', fontSize: 13, border: i===0 ? 'none' : '1px solid #cfe2f3' }}>{t}</div>
+          ))}
+        </div>
+
+        {/* Box — journal style */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <div style={{ fontSize: 11, fontFamily: 'Space Mono', color: '#5c7fc4' }}>LIEU</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ flex: 1, display: 'flex', gap: 4, alignItems: 'center', borderBottom: '1.5px solid #1a3a6e', paddingBottom: 4 }}>
+              <span style={{ fontSize: 14 }}>⬤</span>
+              <span style={{ fontSize: 16, color: '#1a3a6e', fontWeight: 700 }}>Ma box</span>
+              <span style={{ fontSize: 16, color: '#aaa', marginLeft: 8 }}>○</span>
+              <span style={{ fontSize: 16, color: '#aaa' }}>Drop-in</span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <div style={{ flex: 1, borderBottom: '1.5px solid #1a3a6e', paddingBottom: 2 }}>
+              <span style={{ fontSize: 16, color: '#1a3a6e' }}>CrossFit SUD</span>
+            </div>
+            <div style={{ width: 90, borderBottom: '1.5px solid #1a3a6e', paddingBottom: 2 }}>
+              <span style={{ fontSize: 16, color: '#1a3a6e' }}>Romain</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Mouvements journal lines */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div style={{ fontSize: 11, fontFamily: 'Space Mono', color: '#5c7fc4' }}>MOUVEMENTS</div>
+          {['21 Thrusters @ 43 kg', '21 Pull-ups', '15 Thrusters @ 43 kg', '15 Pull-ups'].map((l, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid #cfe2f3' }}>
+              <span style={{ fontSize: 14, color: '#5c7fc4', fontFamily: 'Space Mono', width: 16 }}>{i + 1}.</span>
+              <span style={{ fontSize: 16, color: '#1a3a6e', flex: 1 }}>{l}</span>
+              <span style={{ fontSize: 16, color: '#cfe2f3' }}>✕</span>
+            </div>
+          ))}
+          <div style={{ padding: '5px 0', borderBottom: '1px dashed #cfe2f3', color: '#aaa', fontSize: 15 }}>+ Ligne…</div>
+        </div>
+
+        {/* Résultat */}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
+            <div style={{ fontSize: 11, fontFamily: 'Space Mono', color: '#5c7fc4' }}>TEMPS</div>
+            <div style={{ borderBottom: '2px solid #1a3a6e', paddingBottom: 2, fontSize: 22, fontWeight: 700, color: '#1a3a6e' }}>3:47</div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div style={{ fontSize: 11, fontFamily: 'Space Mono', color: '#5c7fc4' }}>SCALE</div>
+            <div style={{ borderBottom: '2px solid #1a3a6e', paddingBottom: 2, fontSize: 22, fontWeight: 700, color: '#1a3a6e', width: 48 }}>Rx</div>
+          </div>
+          <div style={{ padding: '8px 16px', background: '#1a3a6e', borderRadius: 6, color: '#fff', fontSize: 16, fontWeight: 700 }}>Sauver</div>
+        </div>
+      </div>
+      <TabBar tabs={['WOD','PR','STATS','HISTO']} active={0} />
+    </div>
+  </Sketch>
+);
+
+const C_History = () => (
+  <Sketch style={{ background: '#f5f8ff' }}>
+    <div style={{ height: '100%', background: '#f5f8ff', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      <GridBg />
+      <div style={{ position: 'relative', padding: '10px 20px 12px', borderBottom: '2.5px solid #1a3a6e' }}>
+        <div style={{ fontSize: 11, fontFamily: 'Space Mono', color: '#5c7fc4', letterSpacing: '.1em' }}>CARNET DE SÉANCES</div>
+        <div style={{ fontSize: 26, fontWeight: 700, color: '#1a3a6e' }}>Historique</div>
+      </div>
+      {/* timeline */}
+      <div style={{ flex: 1, padding: '12px 18px', display: 'flex', flexDirection: 'column', gap: 0, position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', left: 30, top: 0, bottom: 80, width: 2, background: '#cfe2f3' }}></div>
+        {[
+          { date: 'Mer 30/04', type: 'FOR TIME', name: 'Fran', result: '3:47 Rx', box: 'CrossFit SUD', coach: 'Romain', drop: false },
+          { date: 'Lun 28/04', type: 'AMRAP 20', name: 'Cindy', result: '22 rds', box: 'CrossFit BCN', coach: 'Maria', drop: true },
+          { date: 'Sam 26/04', type: 'STRENGTH', name: 'Snatch', result: '80 kg 1RM', box: 'CrossFit SUD', coach: 'Alex', drop: false },
+        ].map((w, i) => (
+          <div key={i} style={{ display: 'flex', gap: 14, marginBottom: 14, position: 'relative' }}>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: w.drop ? '#ff9800' : '#1a3a6e', border: '3px solid #f5f8ff', flexShrink: 0, zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: 10, color: '#fff', fontFamily: 'Space Mono' }}>{w.drop ? '✈' : '●'}</span>
+            </div>
+            <div style={{ flex: 1, background: '#fff', borderRadius: 10, padding: '10px 12px', border: '1.5px solid #cfe2f3', boxShadow: '0 1px 4px rgba(26,58,110,.06)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 10, fontFamily: 'Space Mono', color: '#5c7fc4' }}>{w.type}</span>
+                <span style={{ fontSize: 10, fontFamily: 'Space Mono', color: '#bbb' }}>{w.date}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 2 }}>
+                <span style={{ fontSize: 18, fontWeight: 700, color: '#1a3a6e' }}>{w.name}</span>
+                <span style={{ fontSize: 16, fontWeight: 700, color: '#1a3a6e' }}>{w.result}</span>
+              </div>
+              <span style={{ fontSize: 11, color: '#aaa' }}>📍 {w.box} · {w.coach}</span>
+            </div>
+          </div>
+        ))}
+        <div style={{ height: 80 }}></div>
+      </div>
+      <TabBar tabs={['WOD','PR','STATS','HISTO']} active={3} />
+    </div>
+  </Sketch>
+);
+
+const C_PR = () => (
+  <Sketch style={{ background: '#f5f8ff' }}>
+    <div style={{ height: '100%', background: '#f5f8ff', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      <GridBg />
+      <div style={{ position: 'relative', padding: '10px 20px 12px', borderBottom: '2.5px solid #1a3a6e' }}>
+        <div style={{ fontSize: 11, fontFamily: 'Space Mono', color: '#5c7fc4' }}>RECORDS PERSONNELS</div>
+        <div style={{ fontSize: 26, fontWeight: 700, color: '#1a3a6e' }}>Mes PR</div>
+        <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+          {['Haltéro','Gymn','Cardio','Bench'].map((c,i) => (
+            <div key={c} style={{ padding: '3px 10px', borderRadius: 4, background: i===0 ? '#1a3a6e' : 'rgba(26,58,110,.08)', color: i===0 ? '#fff' : '#5c7fc4', fontSize: 12 }}>{c}</div>
+          ))}
+        </div>
+      </div>
+      <div style={{ flex: 1, padding: '12px 18px', display: 'flex', flexDirection: 'column', gap: 6, position: 'relative', overflow: 'hidden' }}>
+        {[
+          { name: 'Clean & Jerk', pr: '105 kg', date: 'Fév 26', delta: '↑ +5 kg' },
+          { name: 'Back Squat', pr: '140 kg', date: 'Jan 26', delta: '↑ +10 kg' },
+          { name: 'Snatch', pr: '80 kg', date: 'Avr 26', delta: '↑ +2.5 kg' },
+          { name: 'Deadlift', pr: '180 kg', date: 'Mar 26', delta: '— même' },
+        ].map((p, i) => (
+          <div key={i} style={{ background: '#fff', borderRadius: 8, padding: '10px 14px', border: '1.5px solid #cfe2f3', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#1a3a6e' }}>{p.name}</div>
+              <div style={{ fontSize: 10, fontFamily: 'Space Mono', color: '#bbb' }}>{p.date}</div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 22, fontWeight: 700, color: '#1a3a6e' }}>{p.pr}</div>
+              <div style={{ fontSize: 11, color: p.delta.startsWith('↑') ? '#2196f3' : '#bbb' }}>{p.delta}</div>
+            </div>
+          </div>
+        ))}
+        {/* grid chart placeholder */}
+        <div style={{ background: '#fff', borderRadius: 8, padding: '10px 14px', border: '1.5px solid #cfe2f3', position: 'relative', overflow: 'hidden' }}>
+          <GridBg />
+          <div style={{ position: 'relative', fontSize: 11, fontFamily: 'Space Mono', color: '#5c7fc4', marginBottom: 8 }}>ÉVOLUTION C&J</div>
+          <div style={{ position: 'relative' }}>
+            <BarChart data={[{l:'S',v:90},{l:'O',v:95},{l:'N',v:95},{l:'D',v:100},{l:'J',v:100},{l:'F',v:105},{l:'A',v:105}]} />
+          </div>
+        </div>
+        <div style={{ height: 80 }}></div>
+      </div>
+      <TabBar tabs={['WOD','PR','STATS','HISTO']} active={1} />
+    </div>
+  </Sketch>
+);
+
+/* ─────────────────────────────────────────
+   ANNOTATIONS / NOTES
+───────────────────────────────────────── */
+const Note = ({ children, color = '#f5c842', rotate = -1 }) => (
+  <div style={{
+    background: color, padding: '10px 14px', borderRadius: 2,
+    boxShadow: '2px 3px 6px rgba(0,0,0,.12)',
+    transform: `rotate(${rotate}deg)`,
+    fontFamily: "'Caveat', cursive", fontSize: 15, color: '#222',
+    maxWidth: 200, lineHeight: 1.4
+  }}>{children}</div>
+);
+
+/* ─────────────────────────────────────────
+   APP ROOT
+───────────────────────────────────────── */
+function App() {
+  return (
+    <DesignCanvas title="CrossFit WOD & PR — Wireframes">
+
+      {/* ── DIRECTION A ── */}
+      <DCSection id="dir-a" title="Direction A — Dark & Intense">
+        <DCArtboard id="a1" label="A. Saisie WOD" width={390} height={844}>
+          <A_LogWOD />
+        </DCArtboard>
+        <DCArtboard id="a2" label="A. Historique" width={390} height={844}>
+          <A_History />
+        </DCArtboard>
+        <DCArtboard id="a3" label="A. Mes PR" width={390} height={844}>
+          <A_PR />
+        </DCArtboard>
+        <DCArtboard id="a-note" label="Notes" width={220} height={844}>
+          <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16, height: '100%', background: '#f0ede8' }}>
+            <Note color="#e8ff47" rotate={-2}>🖤 Fond noir intense, vibes salle de CrossFit</Note>
+            <Note color="#e8ff47" rotate={1}>Accent jaune fluo — lisible, sporty</Note>
+            <Note color="#faf0a0" rotate={-1}>Tab bar bas fixe, 4 sections : WOD · PR · STATS · HISTO</Note>
+            <Note color="#faf0a0" rotate={2}>Badge ORANGE = drop-in, facile à repérer</Note>
+            <Note color="#d4f5c0" rotate={-1}>Évolution PR en mini bar chart en bas des PR</Note>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── DIRECTION B ── */}
+      <DCSection id="dir-b" title="Direction B — Clean & Orange">
+        <DCArtboard id="b1" label="B. Saisie WOD" width={390} height={844}>
+          <B_LogWOD />
+        </DCArtboard>
+        <DCArtboard id="b2" label="B. Historique" width={390} height={844}>
+          <B_History />
+        </DCArtboard>
+        <DCArtboard id="b3" label="B. Mes PR" width={390} height={844}>
+          <B_PR />
+        </DCArtboard>
+        <DCArtboard id="b-note" label="Notes" width={220} height={844}>
+          <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16, height: '100%', background: '#f0ede8' }}>
+            <Note color="#ffd5c5" rotate={-1}>🟠 Fond blanc, header orange vif — moderne et énergique</Note>
+            <Note color="#ffd5c5" rotate={2}>Accent orange #FF5722 — couleur classique CrossFit</Note>
+            <Note color="#faf0a0" rotate={-2}>Card avec border-left colorée : orange = box, jaune = drop</Note>
+            <Note color="#faf0a0" rotate={1}>Compteur de PR (ce mois / total) visible en haut</Note>
+            <Note color="#d4f5c0" rotate={-1}>Formulaire tout-en-un, sections dépliables</Note>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── DIRECTION C ── */}
+      <DCSection id="dir-c" title="Direction C — Carnet quadrillé">
+        <DCArtboard id="c1" label="C. Saisie WOD" width={390} height={844}>
+          <C_LogWOD />
+        </DCArtboard>
+        <DCArtboard id="c2" label="C. Historique" width={390} height={844}>
+          <C_History />
+        </DCArtboard>
+        <DCArtboard id="c3" label="C. Mes PR" width={390} height={844}>
+          <C_PR />
+        </DCArtboard>
+        <DCArtboard id="c-note" label="Notes" width={220} height={844}>
+          <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16, height: '100%', background: '#f0ede8' }}>
+            <Note color="#cfe2f3" rotate={-1}>📓 Fond papier quadrillé — carnet d'athlète vintage</Note>
+            <Note color="#cfe2f3" rotate={2}>Encre bleue marine, grille légère en fond</Note>
+            <Note color="#faf0a0" rotate={-1}>Historique en timeline verticale — très lisible</Note>
+            <Note color="#faf0a0" rotate={1}>Saisie WOD style formulaire journal — minimaliste</Note>
+            <Note color="#d4f5c0" rotate={-2}>Icône ✈️ pour drop-in, point ● pour box habituelle</Note>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+    </DesignCanvas>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
